@@ -21,7 +21,7 @@ test("server-renders the Production Moscow home page", async () => {
   assert.match(html, /<html lang="ru">/i);
   assert.match(html, /<title>Production Moscow: Видеопродакшн полного цикла в Москве<\/title>/i);
   assert.match(html, /rel="canonical" href="https:\/\/www\.productionmoscow\.ru\/?"/);
-  assert.match(html, /Надёжный<br\/>видеопродакшн/);
+  assert.match(html, /Надёжный видеопродакшн для мероприятий и бизнеса/);
   assert.match(html, /Форумы, конференции и корпоративные события\./);
   assert.match(html, /Полный цикл производства: съёмка, трансляции и монтаж/);
   assert.match(html, /ПОСМОТРИТЕ НАШ ШОУРИЛ/);
@@ -41,7 +41,7 @@ test("server-renders the Production Moscow home page", async () => {
   assert.doesNotMatch(html, /Промо для ведущих/);
   assert.doesNotMatch(html, /promodemo/);
   assert.match(html, /class="site-footer"/);
-  assert.match(html, /Production Moscow/);
+  assert.match(html, /ProductionMoscow\.ru/);
 });
 
 test("all Production Moscow public routes render their primary content", async () => {
@@ -49,7 +49,7 @@ test("all Production Moscow public routes render their primary content", async (
     "/case": "Портфолио",
     "/event": "Съёмка корпоративных мероприятий",
     "/stream": "ПРЯМЫЕ",
-    "/contact": "способ связи",
+    "/contact": "Мы сами можем",
     "/conf": "Политика в отношении обработки персональных данных",
   };
 
@@ -71,6 +71,9 @@ test("portfolio page renders all source playlists", async () => {
   assert.match(html, /Фильмы для показа на мероприятиях/);
   assert.match(html, /Ведущим, агентствам, декораторам, диджеям, всем-всем-всем/);
   assert.match(html, /Мы любим снимать необычные и обычные проекты/);
+  assert.match(html, /мероприятиям - будь то День рождения компании или человека/);
+  assert.match(html, /Подкаст Адиса Маммо «Темная Сторона»\. Гость - Виктор Комаров/);
+  assert.match(html, /Операторский скилл - часовой подкаст/);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 3);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 17);
   for (const id of ["456239022", "456239049", "456239059"]) {
@@ -88,6 +91,7 @@ test("stream page preserves source content, media, process and FAQ", async () =>
 
   assert.match(html, /ПРЯМЫЕ<br\/>ТРАНСЛЯЦИИ/);
   assert.match(html, /Мы проводим трансляции на мероприятиях любого формата/);
+  assert.match(html, /онлайн-платформ - будь то ВК, Телеграм или заграничные сервисы/);
   assert.match(html, /kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/);
   assert.equal((html.match(/kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/g) ?? []).length, 2);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 1);
@@ -107,8 +111,11 @@ test("event page renders all source videos, copy and FAQ", async () => {
   const html = await response.text();
 
   assert.match(html, /ПЕРВЫЙ ИВЕНТ-ПРОДАКШН/);
+  assert.match(html, /под ключ в Москве \| ProductionMoscow/);
   assert.match(html, /фото \/\/ видео \/\/ трансляции/);
   assert.match(html, /Наши видео говорят сами за себя:/);
+  assert.match(html, /❓ Какие мероприятия вы снимаете\?/);
+  assert.match(html, /до\u00a0события, чтобы показать их на событии/);
   assert.match(html, /От подготовки технического задания для фотографов и видеографов/);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 11);
   assert.equal((html.match(/<details>/g) ?? []).length, 7);

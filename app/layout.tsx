@@ -3,7 +3,7 @@ import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
 const SITE_URL = "https://www.productionmoscow.ru";
-const DESCRIPTION = "Production Moscow — видеопродакшн полного цикла в Москве и по всей России: съёмка мероприятий, промо-видео, корпоративные фильмы и прямые трансляции.";
+const DESCRIPTION = "Production Moscow - продакшн студия полного цикла в Москве. Видеосъемка мероприятий, прямые трансляции, промо-ролики, музыкальные клипы и фуд-фотография. Узнайте больше!";
 
 const manrope = Manrope({
   variable: "--font-manrope",
