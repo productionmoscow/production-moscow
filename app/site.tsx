@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { sourcePages, type SourcePageData } from "./source-pages-data";
 
-export type SitePage = "home" | "case" | "event" | "stream" | "contact" | "conf";
+export type SitePage = "home" | "case" | "event" | "stream" | "food" | "politika" | "studio" | "kiselev" | "golf" | "pokavsedoma" | "vsacademy" | "gnivts" | "contact" | "conf";
 
 const navItems = [
   { label: "Портфолио", href: "/case" },
   { label: "Трансляции", href: "/stream" },
   { label: "Мероприятия", href: "/event" },
+  { label: "ФудФото", href: "/food" },
 ] as const;
 
 type VideoWork = { title: string; duration?: string; href: string; embed?: string };
@@ -18,6 +20,13 @@ const vkVideo = (id: string, title: string, duration?: string): VideoWork => ({
   title,
   duration,
   href: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
+  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}&hd=2`,
+});
+
+const sourceVkVideo = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`): VideoWork => ({
+  title,
+  duration,
+  href,
   embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}&hd=2`,
 });
 
@@ -68,10 +77,10 @@ const eventWorks = [
 ];
 
 const streamExamples = [
-  vkVideo("456239036", "FSA", "5:02:20"),
-  vkVideo("456239034", "Презентация книги", "3:28:12"),
-  vkVideo("456239035", "Летний турнир по грэпплингу", "6:10:20"),
-  vkVideo("456239040", "Новогодний онлайн-корпоратив", "2:14:20"),
+  sourceVkVideo("456239036", "FSA", "5:02:20", "https://vk.com/prodmskru?z=video-59299172_456239036%2Fvideos-59299172%2Fpl_-59299172_-2"),
+  sourceVkVideo("456239034", "Презентация книги", "3:28:12"),
+  sourceVkVideo("456239035", "Летний турнир по грэпплингу", "6:10:20"),
+  sourceVkVideo("456239040", "Новогодний онлайн-корпоратив", "2:14:20"),
 ];
 
 const streamFeatureVideo: VideoWork = {
@@ -160,6 +169,10 @@ function ContactPhones({ compact = false }: { compact?: boolean }) {
   return <div className={`contact-phones ${compact ? "contact-phones-compact" : ""}`.trim()}>{contactPeople.map(([phone, label]) => <a className={compact ? undefined : "phone-link"} href={`tel:${phone}`} key={phone}>{phone} - {label}</a>)}</div>;
 }
 
+function ContactMethods() {
+  return <div className="contact-methods" aria-label="Способ связи"><span>Способ связи</span><span>Звонок</span><span>ВотсАп</span><span>Телеграм</span><span>Отправить</span></div>;
+}
+
 function VideoEmbed({ video, showMeta = true, showSource = true, loading = "eager" }: { video: VideoWork; showMeta?: boolean; showSource?: boolean; loading?: "eager" | "lazy" }) {
   return <article className="video-embed-card">
     <div className="video-frame"><iframe src={video.embed || video.href} title={video.title} loading={loading} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen /></div>
@@ -175,7 +188,7 @@ function VideoGallery({ videos, showSelectedMeta = true, showSelectedSource = tr
     <VideoEmbed video={selected} showMeta={showSelectedMeta} showSource={showSelectedSource} />
     <div className="video-choice-panel">
       <div className="video-choices">
-        {videos.map((video, index) => <button className={`video-choice ${index === selectedIndex ? "selected" : ""}`} type="button" aria-pressed={index === selectedIndex} key={`${video.title}-${video.href}`} onClick={() => setSelectedIndex(index)}>
+        {videos.map((video, index) => <button className={`video-choice ${index === selectedIndex ? "selected" : ""}`} type="button" aria-pressed={index === selectedIndex} data-video-url={video.href} key={`${video.title}-${video.href}`} onClick={() => setSelectedIndex(index)}>
           <span>{String(index + 1).padStart(2, "0")}</span><strong>{video.title}</strong><small>{video.duration}</small><b aria-hidden="true">{index === selectedIndex ? "●" : "↗"}</b>
         </button>)}
       </div>
@@ -196,7 +209,7 @@ function Footer() {
   return <footer className="site-footer">
     <div className="footer-mark" aria-hidden="true">*</div>
     <div><p className="footer-kicker">ProductionMoscow.ru</p><p className="footer-copy">Мы предлагаем прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий.<br />Работаем по всей России, базируемся в Москве.<br />Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p></div>
-    <div className="footer-links"><ContactPhones compact /><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="/conf">Контакты</a></div>
+    <div className="footer-links"><ContactPhones compact /><a className="footer-source-phone" href="tel:+79585647717">+79585647717 - Андрей</a><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="https://vk.com/prodmskru" target="_blank" rel="noreferrer">ВКонтакте</a><a href="http://productionmoscow.ru" target="_blank" rel="noreferrer">ProductionMoscow.ru</a><a href="/conf">Контакты</a></div>
     <div className="footer-bottom"><span>ProductionMoscow.ru</span><a href="/contact">Контакты ↗</a></div>
   </footer>;
 }
@@ -215,7 +228,7 @@ function HomePage() {
 
     <section className="lined-section production-services reveal"><SectionHead number="02" title="Что мы можем?" emphasizeNumber>Список сервисов, которые мы предоставляем</SectionHead><div className="service-answers production-services-grid">{services.map(([title, description]) => <article key={title}><h3>{title}</h3><p>{description}</p></article>)}</div></section>
     <section className="lined-section production-why reveal"><SectionHead number="03" title="Почему мы?">Есть несколько отличительных особенностей,<br />за которые нас выбирают</SectionHead><div className="production-principles-grid">{principles.map(([title, description], index) => <article key={title}><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{description}</p></article>)}</div></section>
-    <section className="lined-section production-contact-prompt reveal"><p className="eyebrow">productionmoscow.ru</p><h2>Мы сами можем с вами связаться</h2><p>Просто оставьте нам свои контакты</p><ArrowLink href="/contact">Отправить</ArrowLink></section>
+    <section className="lined-section production-contact-prompt reveal"><p className="eyebrow">productionmoscow.ru</p><h2>Мы сами можем с вами связаться</h2><p>Просто оставьте нам свои контакты</p><ContactMethods /><ArrowLink href="/contact">Отправить</ArrowLink></section>
     <section className="lined-section production-thanks reveal"><SectionHead number="04" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="production-thanks-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
     <section className="contact-banner reveal"><div><p className="small-label">05 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
@@ -224,7 +237,7 @@ function HomePage() {
 function CasePage() {
   return <Shell current="case">
     <section className="page-intro reveal"><div className="intro-number">01</div><div><p className="eyebrow">ИВЕНТ-ПРОДАКШН</p><h1>Портфолио<br />видеопродакшна<br />Production Moscow</h1></div></section>
-    <section className="lined-section production-portfolio-section reveal"><SectionHead number="02" title="Фильмы для показа на мероприятиях" /><p className="section-lead">Мы любим снимать сложные и интересные фильмы к определенным мероприятиям - будь то День рождения компании или человека. Как правило - это большой объемный проект со сценарием, несколькими съемочными днями и обстоятельным монтажом. Это то, что мы делаем лучше всего.</p><VideoGallery videos={caseFilms} /></section>
+    <section className="lined-section production-portfolio-section reveal"><SectionHead number="02" title="Фильмы для показа на мероприятях" /><p className="section-lead">Мы любим снимать сложные и интересные фильмы к определенным мероприятиям - будь то День рождения компании или человека. Как правило - это большой объемный проект со сценарием, несколькими съемочными днями и обстоятельным монтажом. Это то, что мы делаем лучше всего.</p><VideoGallery videos={caseFilms} /></section>
     <section className="lined-section production-portfolio-section reveal"><SectionHead number="03" title="Промо-ролики" /><p className="section-lead">Ведущим, агентствам, декораторам, диджеям, всем-всем-всем</p><VideoGallery videos={casePromos} /></section>
     <section className="lined-section production-portfolio-section reveal"><SectionHead number="04" title="Проекты" /><p className="section-lead">Мы любим снимать необычные и обычные проекты - подкасты, стендапы, интервью (которые у нас лучше всего получаются), спортивные мероприятия, мастер-классы</p><VideoGallery videos={caseProjects} /></section>
     <section className="contact-banner event-contact reveal"><div><p className="small-label">05 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
@@ -237,7 +250,7 @@ function EventPage() {
     <section className="lined-section production-event-playlist reveal"><SectionHead number="02" title="Наши видео говорят сами за себя:" /><VideoGallery videos={eventWorks} /></section>
     <section className="lined-section production-event-copy reveal"><div className="two-column-copy"><p>От подготовки технического задания для фотографов и видеографов на основании сценария мероприятия до финального монтажа и цветокоррекции</p><div><p><strong>Мы — продакшн полного цикла, специализирующийся на видеосъёмке мероприятий в Москве и по всей России.</strong></p><p>Мы работаем с корпоративными клиентами, ивент-агентствами и частными заказчиками.</p><p>В наших руках — всё: от подготовки технического задания для фотографов и видеографов на основании сценария мероприятия до финального монтажа и цветокоррекции. В каждый проект мы вкладываем визуальный язык — мягкий свет, живую динамику, красивый свет, расфокус и ту самую ламповость, которую любят наши клиенты.</p></div></div></section>
     <FaqSection number="03" title="" items={eventFaq} className="production-event-faq" />
-    <section className="contact-banner event-contact reveal"><div><p className="small-label">04 / Контакты</p><h2>Мы сами можем<br /><span>с вами связаться</span></h2></div><div className="contact-banner-action"><p>Просто оставьте нам свои контакты</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
+    <section className="contact-banner event-contact reveal"><div><p className="small-label">04 / Контакты</p><h2>Мы сами можем<br /><span>с вами связаться</span></h2></div><div className="contact-banner-action"><p>Просто оставьте нам свои контакты</p><ContactMethods /><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
 }
 
@@ -249,23 +262,58 @@ function StreamPage() {
     <section className="lined-section stream-proof reveal"><SectionHead number="04" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="stream-proof-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
     <section className="lined-section stream-process reveal"><SectionHead number="05" title="Этапы работы" /><div className="stream-process-grid"><article><span>01</span><h3>Получение технического задания</h3><p>«Мы начинаем с того, что слушаем вас. Ваши цели, задачи, аудитория и формат мероприятия — это то, что определяет сценарий трансляции. Мы помогаем сформулировать ключевые моменты, выбираем платформы для трансляции и составляем понятное техническое задание.»</p><ul><li>Определяем формат и задачи трансляции.</li><li>Проговариваем детали (платформы, графика, структура).</li><li>При необходимости выезжаем на площадку для осмотра.</li></ul></article><article><span>02</span><h3>Подготовка оборудования и площадки</h3><p>«Мы обеспечиваем техническую сторону вашего события: от настройки света и звука до тестирования всех систем. На площадке мы устанавливаем камеры, готовим графику и настраиваем стабильное соединение для трансляции. Всё тестируется заранее, чтобы избежать любых сбоев.»</p><ul><li>Устанавливаем камеры, свет и звук.</li><li>Настраиваем графику и платформы для эфира.</li><li>Тестируем оборудование и готовим резервные системы.</li></ul></article><article><span>03</span><h3>Проведение трансляции</h3><p>«В назначенный день мы превращаем ваше событие в телешоу. Работаем с многокамерной съёмкой, живым переключением кадров и графикой, чтобы ваша аудитория увидела всё на высшем уровне. Мы следим за стабильностью трансляции, чтобы ничего не отвлекало от происходящего на экране.»</p><ul><li>Проводим многокамерную съёмку.</li><li>Используем графику и визуальные эффекты в реальном времени.</li><li>Гарантируем стабильность трансляции на всех платформах.</li></ul></article></div></section>
     <FaqSection number="06" title={<>Частые вопросы<br />про трансляции</>} items={streamFaq} className="stream-faq" />
-    <section className="contact-banner stream-contact event-contact reveal"><div><p className="small-label">07 / Контакты</p><h2>Вопросы по<br /><span>трансляции?</span></h2></div><div className="contact-banner-action"><p>Мы можем сами связаться с Вами</p><p>Просто заполните форму, и мы свяжемся с Вами в ближайшее время</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
+    <section className="contact-banner stream-contact event-contact reveal"><div><p className="small-label">07 / Контакты</p><h2>Вопросы по<br /><span>трансляции?</span></h2></div><div className="contact-banner-action"><p>Мы можем сами связаться с Вами</p><p>Просто заполните форму, и мы свяжемся с Вами в ближайшее время</p><ContactMethods /><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
 }
 
 function ContactPage() {
-  return <Shell current="contact"><section className="contact-page reveal"><div className="intro-number">01</div><div><p className="eyebrow">ProductionMoscow.ru // Контакты</p><h1>Мы сами можем<br />с вами связаться</h1><p className="contact-description">Мы предлагаем прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий.<br />Работаем по всей России, базируемся в Москве.<br />Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><div className="contact-links"><ArrowLink href="https://t.me/productionmoscow" external>Телеграм</ArrowLink></div></div></section><section className="contact-note reveal"><span className="asterisk">*</span><p>Просто оставьте нам свои контакты</p></section></Shell>;
+  return <Shell current="contact"><section className="contact-page reveal"><div className="intro-number">01</div><div><p className="eyebrow">ProductionMoscow.ru // Контакты</p><h1>Мы сами можем<br />с вами связаться</h1><p className="contact-description">Мы предлагаем прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий.<br />Работаем по всей России, базируемся в Москве.<br />Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactMethods /><ContactPhones /><div className="contact-links"><ArrowLink href="https://t.me/productionmoscow" external>Телеграм</ArrowLink></div></div></section><section className="contact-note reveal"><span className="asterisk">*</span><p>Просто оставьте нам свои контакты</p></section></Shell>;
 }
 
 function PrivacyPage() {
-  const sections = [["1. Общие положения", "Настоящая политика определяет порядок обработки персональных данных на сайте ProductionMoscow.ru."], ["2. Какие данные мы обрабатываем", "Имя, номер телефона и другие сведения, которые пользователь добровольно оставляет для связи."], ["3. Цели обработки", "Данные используются только для связи с пользователем, подготовки предложения и организации работы по проекту."], ["4. Контакты", "По вопросам обработки персональных данных можно связаться с Production Moscow по телефону +7 926 539 90 93."]] as const;
-  return <Shell current="conf"><section className="legal-page reveal"><div className="intro-number">05</div><div><p className="eyebrow">ProductionMoscow.ru</p><h1>Политика в отношении обработки персональных данных</h1><div className="legal-copy">{sections.map(([title, text]) => <section key={title}><h2>{title}</h2><p>{text}</p></section>)}</div></div></section></Shell>;
+  return <SourcePage current="conf" data={sourcePages["/politika"]} />;
+}
+
+function sourceVideoEmbed(url: string) {
+  if (url.includes("youtu.be/")) return `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split(/[?&#]/)[0]}`;
+  if (url.includes("youtube.com/watch")) return `https://www.youtube.com/embed/${new URL(url).searchParams.get("v") || ""}`;
+  if (url.includes("vk.com/video-")) {
+    const match = url.match(/video-(-?\d+)_([0-9]+)/);
+    return match ? `https://vk.com/video_ext.php?oid=-${match[1].replace(/^-/, "")}&id=${match[2]}&hd=2` : url;
+  }
+  return url;
+}
+
+/* eslint-disable @next/next/no-img-element */
+function SourceImage({ src, index, slug }: { src: string; index: number; slug: string }) {
+  return <a className="source-image" href={src} target="_blank" rel="noreferrer"><img src={src} alt={`Материал оригинальной страницы ${slug}, ${index + 1}`} loading={index === 0 ? "eager" : "lazy"} /></a>;
+}
+/* eslint-enable @next/next/no-img-element */
+
+function SourcePage({ current, data }: { current: SitePage; data: SourcePageData }) {
+  const firstRecord = data.records[0] || data.title;
+  const number = current === "conf" ? "05" : "01";
+  return <Shell current={current}>
+    <section className="source-page-hero reveal"><div className="intro-number">{number}</div><div><p className="eyebrow">ОРИГИНАЛЬНАЯ СТРАНИЦА // {data.slug}</p><h1>{firstRecord}</h1><p className="source-page-title">{data.title}</p><ArrowLink href={data.originalUrl} external>Открыть оригинал</ArrowLink></div></section>
+    <section className="lined-section source-content reveal"><SectionHead number="02" title="Содержимое страницы">Текст и данные перенесены из оригинального ProductionMoscow.ru</SectionHead><div className="source-records">{data.records.map((record, index) => <article className="source-record" key={`${data.slug}-record-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p>{record}</p></article>)}</div>{data.tables.length ? <div className="source-tables"><h2>Таблицы и сметы</h2>{data.tables.map((table, index) => <article className="source-table" key={`${data.slug}-table-${index}`}><h3>{table.header || `Таблица ${index + 1}`}</h3><pre>{table.rows}</pre></article>)}</div> : null}</section>
+    {data.videoUrls.length ? <section className="lined-section source-videos reveal"><SectionHead number="03" title="Видео из оригинала">Все видеоссылки исходной страницы</SectionHead><div className="source-video-grid">{data.videoUrls.map((url, index) => <article className="source-video-card" key={url}><div className="source-video-frame"><iframe src={sourceVideoEmbed(url)} title={`Видео оригинала ${index + 1}`} loading="lazy" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen /></div><a href={url} target="_blank" rel="noreferrer">{url}</a></article>)}</div></section> : null}
+    {data.imageUrls.length ? <section className="lined-section source-gallery reveal"><SectionHead number={data.videoUrls.length ? "04" : "03"} title="Изображения оригинала">{data.imageUrls.length} исходных изображений со страницы</SectionHead><div className="source-image-grid">{data.imageUrls.map((src, index) => <SourceImage key={src} src={src} index={index} slug={data.slug} />)}</div></section> : null}
+    <section className="lined-section source-inventory reveal"><SectionHead number={data.imageUrls.length ? "05" : "04"} title="Ссылки и исходные материалы">Сохранил адреса ссылок и медиа, которые используются оригиналом</SectionHead><div className="source-inventory-grid"><div><h3>Ссылки</h3><ul>{data.links.map((link, index) => <li key={`${link.href}-${index}`}><a href={link.href} target={link.href.startsWith("http") ? "_blank" : undefined} rel={link.href.startsWith("http") ? "noreferrer" : undefined}>{link.text || link.href}</a><code>{link.href}</code></li>)}</ul></div><div><h3>Медиа-адреса</h3><details open><summary>{data.mediaUrls.length} адресов оригинала</summary><ul>{data.mediaUrls.map((url) => <li key={url}><a href={url} target="_blank" rel="noreferrer">{url}</a></li>)}</ul></details></div></div></section>
+  </Shell>;
 }
 
 export default function Site({ page = "home" }: { page?: SitePage }) {
   if (page === "case") return <CasePage />;
   if (page === "event") return <EventPage />;
   if (page === "stream") return <StreamPage />;
+  if (page === "food") return <SourcePage current="food" data={sourcePages["/food"]} />;
+  if (page === "politika") return <SourcePage current="politika" data={sourcePages["/politika"]} />;
+  if (page === "studio") return <SourcePage current="studio" data={sourcePages["/studio"]} />;
+  if (page === "kiselev") return <SourcePage current="kiselev" data={sourcePages["/kiselev"]} />;
+  if (page === "golf") return <SourcePage current="golf" data={sourcePages["/golf"]} />;
+  if (page === "pokavsedoma") return <SourcePage current="pokavsedoma" data={sourcePages["/pokavsedoma"]} />;
+  if (page === "vsacademy") return <SourcePage current="vsacademy" data={sourcePages["/vsacademy"]} />;
+  if (page === "gnivts") return <SourcePage current="gnivts" data={sourcePages["/gnivts"]} />;
   if (page === "contact") return <ContactPage />;
   if (page === "conf") return <PrivacyPage />;
   return <HomePage />;

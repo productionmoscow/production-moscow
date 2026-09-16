@@ -1,23 +1,8 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
 const SITE_URL = "https://www.productionmoscow.ru";
 const DESCRIPTION = "Production Moscow - продакшн студия полного цикла в Москве. Видеосъемка мероприятий, прямые трансляции, промо-ролики, музыкальные клипы и фуд-фотография. Узнайте больше!";
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["cyrillic", "latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["cyrillic", "latin"],
-  display: "swap",
-  weight: ["400", "500", "600"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -50,7 +35,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${manrope.variable} ${plexMono.variable} antialiased`}>
+      <body className="antialiased">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [

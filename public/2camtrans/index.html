@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<meta name="robots" content="noindex,nofollow,noimageindex,nosnippet">
+<title>Видное — чек-лист съёмки</title>
+<style>
+:root{
+  --paper:#f3f1ec;
+  --ink:#111111;
+  --muted:#77736c;
+  --line:#c8c4bc;
+  --soft:#e8e4dc;
+  --accent:#ff4b2b;
+  --ok:#111111;
+  --radius:0px;
+  --max:1180px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:Arial,Helvetica,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input{font:inherit}
+a{color:inherit}
+.wrap{width:min(var(--max),calc(100% - 32px));margin:0 auto}
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:rgba(243,241,236,.94);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--ink);
+}
+.topbar-inner{display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;min-height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.brand .star{color:var(--accent);font-size:18px;line-height:1}
+.progress-wrap{display:flex;align-items:center;gap:12px;min-width:190px}
+.progress-track{width:120px;height:5px;background:var(--line);overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--ink);transition:width .2s ease}
+.progress-text{font-size:12px;font-weight:700;white-space:nowrap}
+.hero{padding:56px 0 38px;border-bottom:1px solid var(--ink)}
+.kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(54px,12vw,150px);line-height:.82;letter-spacing:-.075em;margin:0;font-weight:800;max-width:980px}
+h1 .outline{-webkit-text-stroke:1.5px var(--ink);color:transparent}
+.hero-meta{display:grid;grid-template-columns:1.3fr .7fr;gap:30px;margin-top:38px;padding-top:22px;border-top:1px solid var(--line)}
+.hero-meta p{margin:0;max-width:620px;font-size:18px;line-height:1.35}
+.hero-meta .small{font-size:12px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:right}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+.btn{
+  appearance:none;border:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:12px 16px;text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700;cursor:pointer;
+}
+.btn:hover,.btn:focus-visible{background:var(--ink);color:var(--paper);outline:none}
+.btn.danger{border-color:var(--accent);color:var(--accent)}
+.btn.danger:hover,.btn.danger:focus-visible{background:var(--accent);color:white}
+.navstrip{border-bottom:1px solid var(--ink);overflow:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+.navstrip-inner{display:flex;min-width:max-content}
+.navstrip a{text-decoration:none;padding:15px 22px 14px 0;margin-right:26px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.navstrip a:hover{color:var(--ink)}
+.section{display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid var(--ink);padding:44px 0 48px;scroll-margin-top:100px}
+.sec-no{font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.sec-main h2{font-size:clamp(31px,5vw,64px);line-height:.95;letter-spacing:-.055em;margin:0 0 28px;font-weight:800}
+.sec-note{margin:-10px 0 24px;color:var(--muted);font-size:14px;line-height:1.5;max-width:720px}
+.checklist{border-top:1px solid var(--ink)}
+.item{
+  display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;
+  min-height:62px;border-bottom:1px solid var(--line);cursor:pointer;transition:opacity .15s ease,background .15s ease;
+}
+.item:hover{background:rgba(0,0,0,.025)}
+.item input{position:absolute;opacity:0;pointer-events:none}
+.box{width:24px;height:24px;border:1.5px solid var(--ink);display:grid;place-items:center;margin-left:2px}
+.box:after{content:"";width:12px;height:6px;border-left:2px solid var(--paper);border-bottom:2px solid var(--paper);transform:rotate(-45deg) translateY(-1px);opacity:0}
+.item input:checked + .box{background:var(--ink)}
+.item input:checked + .box:after{opacity:1}
+.item input:focus-visible + .box{outline:3px solid rgba(255,75,43,.3);outline-offset:2px}
+.item .label{font-size:17px;line-height:1.25;padding:17px 0}
+.item .qty{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-right:4px;white-space:nowrap}
+.item.done{opacity:.38}
+.item.done .label{text-decoration:line-through;text-decoration-thickness:1px}
+.item.critical .label:after{content:"  *";color:var(--accent);font-weight:800}
+.section-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.section-foot button{border:0;background:none;padding:0;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:700;cursor:pointer}
+.section-foot button:hover{color:var(--ink)}
+.signal{
+  margin-top:26px;border:1px solid var(--ink);padding:20px;display:grid;gap:10px;
+  font-size:13px;line-height:1.45;background:rgba(255,255,255,.12)
+}
+.signal strong{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.signal .flow{font-size:16px;font-weight:700;letter-spacing:-.02em}
+.final{padding:56px 0 90px}
+.final-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.final-card{border:1px solid var(--ink);padding:24px}
+.final-card h3{margin:0 0 18px;font-size:26px;letter-spacing:-.035em}
+.final-card p{margin:0;color:var(--muted);line-height:1.45}
+.done-banner{margin-top:26px;border-top:1px solid var(--ink);padding-top:24px;font-size:clamp(36px,7vw,88px);line-height:.9;letter-spacing:-.06em;font-weight:800}
+.done-banner span{color:var(--accent)}
+.footer{border-top:1px solid var(--ink);padding:20px 0 36px;display:flex;justify-content:space-between;gap:20px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:var(--paper);padding:12px 14px;font-size:12px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s;z-index:50}
+.toast.show{opacity:1;transform:none}
+@media(max-width:720px){
+  .wrap{width:min(100% - 22px,var(--max))}
+  .topbar-inner{min-height:54px}
+  .brand{font-size:10px}.progress-wrap{min-width:0}.progress-track{width:70px}
+  .hero{padding:36px 0 28px}.hero-meta{grid-template-columns:1fr}.hero-meta .small{text-align:left}
+  .section{grid-template-columns:1fr;padding:30px 0 34px}.sec-no{margin-bottom:14px}
+  .sec-main h2{margin-bottom:22px}.item{grid-template-columns:38px 1fr auto;gap:8px;min-height:58px}.item .label{font-size:16px}.item .qty{font-size:9px}
+  .final-grid{grid-template-columns:1fr}.footer{flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.topbar,.controls,.navstrip,.section-foot,.toast{display:none!important}.section{break-inside:avoid}.item{min-height:36px}.hero{padding-top:0}body{background:white}.wrap{width:100%}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span>Антон Чернов</span><span class="star">*</span><span>Видное</span></div>
+    <div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="progress-text" id="progressText">0 / 0</div></div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Съёмка / двухкамерная ISO-запись / чек-лист оборудования</div>
+    <h1>ВИД<span class="outline">НОЕ</span>*</h1>
+    <div class="hero-meta">
+      <p>Собрать всё для двухкамерной записи через ATEM Mini Extreme ISO, чистого мастера звука и резервного технического аудио.</p>
+      <div class="small">Отметки сохраняются<br>на этом устройстве автоматически</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="checkCritical">Отметить обязательное</button>
+      <button class="btn" onclick="window.print()">Печать / PDF</button>
+      <button class="btn danger" id="resetAll">Сбросить всё</button>
+    </div>
+  </div>
+</header>
+
+<nav class="navstrip">
+  <div class="wrap navstrip-inner">
+    <a href="#cameras">Камеры</a><a href="#atem">ATEM / HDMI</a><a href="#monitor">Контроль</a><a href="#record">Запись</a><a href="#mac">MacBook</a><a href="#audio">Звук</a><a href="#wireless">DJI</a><a href="#power">Питание</a><a href="#small">Мелочёвка</a><a href="#before">Перед выездом</a>
+  </div>
+</nav>
+
+<main class="wrap" id="app">
+<section class="section" id="cameras" data-title="Камеры">
+  <div class="sec-no">01 / 10</div><div class="sec-main">
+    <h2>Камеры</h2><p class="sec-note">Одна камера — общий план. Вторая — крупный план рядом с режиссёрским местом.</p>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="cam1"><span class="box"></span><span class="label">Sony — камера №1</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="cam2"><span class="box"></span><span class="label">Sony — камера №2</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="lens1"><span class="box"></span><span class="label">Объектив для общего плана</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="lens2"><span class="box"></span><span class="label">Объектив для крупного плана</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="tripods"><span class="box"></span><span class="label">Штативы</span><span class="qty">2 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="dummy"><span class="box"></span><span class="label">Dummy battery / сетевое питание Sony</span><span class="qty">2 компл.</span></label>
+      <label class="item"><input type="checkbox" data-id="batteries"><span class="box"></span><span class="label">Обычные аккумуляторы Sony — резерв</span><span class="qty">комплект</span></label>
+      <label class="item"><input type="checkbox" data-id="charger"><span class="box"></span><span class="label">Зарядка для аккумуляторов</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="caps"><span class="box"></span><span class="label">Крышки камер / объективов</span><span class="qty">комплект</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="atem" data-title="ATEM / HDMI">
+  <div class="sec-no">02 / 10</div><div class="sec-main">
+    <h2>ATEM / HDMI</h2><p class="sec-note">Длинный HDMI — для дальней камеры. Второй длинный кабель — резерв или запас под неожиданную схему зала.</p>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="atem"><span class="box"></span><span class="label">ATEM Mini Extreme ISO</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="atem-power"><span class="box"></span><span class="label">Блок питания ATEM</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="hdmi20a"><span class="box"></span><span class="label">HDMI 20 м — основной</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="hdmi20b"><span class="box"></span><span class="label">HDMI 20 м — резервный</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="hdmi-short"><span class="box"></span><span class="label">Короткие HDMI</span><span class="qty">4–8 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="sony-hdmi"><span class="box"></span><span class="label">HDMI-переходники под Sony</span><span class="qty">2+ шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="splitters"><span class="box"></span><span class="label">Активные HDMI-сплиттеры / репитеры</span><span class="qty">2 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="splitter-power"><span class="box"></span><span class="label">Блоки питания к HDMI-сплиттерам</span><span class="qty">2 шт.</span></label>
+    </div>
+    <div class="signal"><strong>Основной видеотракт</strong><div class="flow">Sony общий → 20 м HDMI → ATEM<br>Sony крупный → короткий HDMI → ATEM</div></div>
+    <div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="monitor" data-title="Контроль">
+  <div class="sec-no">03 / 10</div><div class="sec-main">
+    <h2>Контроль</h2>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="monitor"><span class="box"></span><span class="label">Монитор для Multiview</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="monitor-power"><span class="box"></span><span class="label">Питание монитора</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="monitor-hdmi"><span class="box"></span><span class="label">HDMI ATEM → монитор</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="monitor-hdmi-spare"><span class="box"></span><span class="label">Запасной HDMI для монитора</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="headphones"><span class="box"></span><span class="label">Наушники</span><span class="qty">1 шт.</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="record" data-title="Запись">
+  <div class="sec-no">04 / 10</div><div class="sec-main">
+    <h2>Запись</h2>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="ssd1"><span class="box"></span><span class="label">SSD — основной для ATEM ISO</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="ssd2"><span class="box"></span><span class="label">SSD — резервный</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="ssd-cable"><span class="box"></span><span class="label">USB-C кабель SSD → ATEM</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="ssd-cable-spare"><span class="box"></span><span class="label">Запасной USB-C для SSD</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="cards"><span class="box"></span><span class="label">Карты памяти для камер — как аварийный резерв</span><span class="qty">что есть</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="mac" data-title="MacBook">
+  <div class="sec-no">05 / 10</div><div class="sec-main">
+    <h2>MacBook</h2>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="mac"><span class="box"></span><span class="label">MacBook</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="mac-power"><span class="box"></span><span class="label">Зарядка MacBook</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="mac-atem"><span class="box"></span><span class="label">Кабель MacBook → ATEM</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="reader"><span class="box"></span><span class="label">Кардридер</span><span class="qty">1 шт.</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="audio" data-title="Звук">
+  <div class="sec-no">06 / 10</div><div class="sec-main">
+    <h2>Основной звук</h2><p class="sec-note">Рекордер стоит у микшера площадки и непрерывно пишет чистый мастер.</p>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="recorder"><span class="box"></span><span class="label">Zoom рекордер</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="rec-card"><span class="box"></span><span class="label">Карта памяти для рекордера</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="rec-card-spare"><span class="box"></span><span class="label">Запасная карта памяти</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="xlr"><span class="box"></span><span class="label">XLR-кабели</span><span class="qty">несколько</span></label>
+      <label class="item critical"><input type="checkbox" data-id="jack"><span class="box"></span><span class="label">Jack 6,3 мм кабели / переходники</span><span class="qty">комплект</span></label>
+      <label class="item"><input type="checkbox" data-id="audio-adapters"><span class="box"></span><span class="label">XLR / Jack / mini-jack переходники</span><span class="qty">комплект</span></label>
+      <label class="item critical"><input type="checkbox" data-id="shotgun"><span class="box"></span><span class="label">Пушка — технический звук / зал</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="shotgun-mount"><span class="box"></span><span class="label">Крепление / стойка для пушки</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="batteries-aa"><span class="box"></span><span class="label">Батарейки для рекордера / аудио</span><span class="qty">запас</span></label>
+    </div>
+    <div class="signal"><strong>Чистый мастер</strong><div class="flow">Микшер площадки → Zoom → WAV непрерывно</div></div>
+    <div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="wireless" data-title="DJI / техзвук">
+  <div class="sec-no">07 / 10</div><div class="sec-main">
+    <h2>DJI / техзвук</h2><p class="sec-note">Беспроводной мост нужен, если микшер площадки стоит далеко от ATEM. В Mic 2 — независимый технический звук.</p>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="dji"><span class="box"></span><span class="label">Старый комплект DJI Mic</span><span class="qty">1 компл.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="dji-tx"><span class="box"></span><span class="label">DJI передатчик</span><span class="qty">1+ шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="dji-rx"><span class="box"></span><span class="label">DJI приёмник</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="dji-charge"><span class="box"></span><span class="label">Зарядка / USB-C питание DJI</span><span class="qty">комплект</span></label>
+      <label class="item critical"><input type="checkbox" data-id="aux4"><span class="box"></span><span class="label">AUX mini-jack ↔ mini-jack</span><span class="qty">4 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="aux-ext"><span class="box"></span><span class="label">Удлинитель mini-jack</span><span class="qty">1 шт.</span></label>
+    </div>
+    <div class="signal"><strong>Если FOH далеко</strong><div class="flow">Zoom headphone/line out → DJI TX ⇢ DJI RX → ATEM Mic 1<br>Пушка / техзвук → ATEM Mic 2</div></div>
+    <div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="power" data-title="Питание">
+  <div class="sec-no">08 / 10</div><div class="sec-main">
+    <h2>Питание</h2>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="reel1"><span class="box"></span><span class="label">Жёлтая катушка / удлинитель 10 м №1</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="reel2"><span class="box"></span><span class="label">Жёлтая катушка / удлинитель 10 м №2</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="extension-spare"><span class="box"></span><span class="label">Дополнительный удлинитель — резерв</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="powerstrip"><span class="box"></span><span class="label">Сетевой фильтр на режиссёрский стол</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="triple"><span class="box"></span><span class="label">Тройники / разветвители</span><span class="qty">2+ шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="usb-bricks"><span class="box"></span><span class="label">Запасные USB-блоки питания</span><span class="qty">2+ шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="powerbank"><span class="box"></span><span class="label">Powerbank</span><span class="qty">1 шт.</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="small" data-title="Мелочёвка">
+  <div class="sec-no">09 / 10</div><div class="sec-main">
+    <h2>Мелочёвка</h2>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="gaffer"><span class="box"></span><span class="label">Гаффер</span><span class="qty">1 рул.</span></label>
+      <label class="item"><input type="checkbox" data-id="tape"><span class="box"></span><span class="label">Изолента</span><span class="qty">1 рул.</span></label>
+      <label class="item"><input type="checkbox" data-id="velcro"><span class="box"></span><span class="label">Velcro-липучки</span><span class="qty">набор</span></label>
+      <label class="item"><input type="checkbox" data-id="ties"><span class="box"></span><span class="label">Пластиковые стяжки</span><span class="qty">набор</span></label>
+      <label class="item"><input type="checkbox" data-id="scissors"><span class="box"></span><span class="label">Ножницы</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="multitool"><span class="box"></span><span class="label">Мультитул</span><span class="qty">1 шт.</span></label>
+      <label class="item"><input type="checkbox" data-id="flashlight"><span class="box"></span><span class="label">Фонарик</span><span class="qty">1 шт.</span></label>
+      <label class="item critical"><input type="checkbox" data-id="usbc"><span class="box"></span><span class="label">USB-C кабели</span><span class="qty">несколько</span></label>
+      <label class="item"><input type="checkbox" data-id="usb-a-c"><span class="box"></span><span class="label">USB-A ↔ USB-C</span><span class="qty">несколько</span></label>
+      <label class="item"><input type="checkbox" data-id="marker"><span class="box"></span><span class="label">Малярный скотч + маркер для подписей</span><span class="qty">комплект</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="section" id="before" data-title="Перед выездом">
+  <div class="sec-no">10 / 10</div><div class="sec-main">
+    <h2>Перед выездом</h2><p class="sec-note">Это не «взять», а проверить дома до упаковки.</p>
+    <div class="checklist">
+      <label class="item critical"><input type="checkbox" data-id="test-hdmi"><span class="box"></span><span class="label">Прогнать Sony → 20 м HDMI → ATEM минимум 30–60 минут</span><span class="qty">тест</span></label>
+      <label class="item critical"><input type="checkbox" data-id="test-split"><span class="box"></span><span class="label">Проверить длинный HDMI через активный сплиттер</span><span class="qty">тест</span></label>
+      <label class="item critical"><input type="checkbox" data-id="test-ssd"><span class="box"></span><span class="label">Проверить SSD: место, формат, тестовая ISO-запись</span><span class="qty">тест</span></label>
+      <label class="item critical"><input type="checkbox" data-id="test-files"><span class="box"></span><span class="label">Открыть тестовые ISO-файлы на MacBook</span><span class="qty">тест</span></label>
+      <label class="item critical"><input type="checkbox" data-id="test-macros"><span class="box"></span><span class="label">Подготовить и проверить макросы / PiP</span><span class="qty">тест</span></label>
+      <label class="item"><input type="checkbox" data-id="save-atem"><span class="box"></span><span class="label">Сохранить конфигурацию ATEM отдельным файлом</span><span class="qty">backup</span></label>
+      <label class="item critical"><input type="checkbox" data-id="test-audio"><span class="box"></span><span class="label">Прогнать Zoom → DJI → ATEM и выставить уровни без клиппинга</span><span class="qty">тест</span></label>
+      <label class="item critical"><input type="checkbox" data-id="charge-dji"><span class="box"></span><span class="label">Полностью зарядить DJI</span><span class="qty">100%</span></label>
+      <label class="item critical"><input type="checkbox" data-id="charge-all"><span class="box"></span><span class="label">Зарядить всё резервное питание / аккумуляторы</span><span class="qty">100%</span></label>
+      <label class="item"><input type="checkbox" data-id="organizers"><span class="box"></span><span class="label">Попросить организаторов все вопросы из зала задавать только в микрофон</span><span class="qty">важно</span></label>
+    </div><div class="section-foot"><span class="sec-progress"></span><button class="toggle-section">Отметить раздел</button></div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="final-grid">
+    <div class="final-card"><h3>Что должно выжить отдельно</h3><p>ATEM пишет ISO на SSD. Zoom независимо и непрерывно пишет чистый мастер WAV. Даже если беспроводной мост или ATEM-аудио дадут сбой, мастер остаётся целым.</p></div>
+    <div class="final-card"><h3>Что слушать на саундчеке</h3><p>Не только рекордер. Обязательно послушать именно конечный звук, который доходит до ATEM, и проверить Mic 1 / Mic 2 на Multiview.</p></div>
+  </div>
+  <div class="done-banner" id="doneBanner">СОБРАНО <span>0%</span></div>
+</section>
+</main>
+<footer class="wrap footer"><span>Антон Чернов*</span><span>Видное / технический чек-лист</span></footer>
+<div class="toast" id="toast">Сохранено</div>
+
+<script>
+const KEY='antonchernov_vidnoe_checklist_v2';
+const boxes=[...document.querySelectorAll('input[type="checkbox"][data-id]')];
+const toast=document.getElementById('toast');
+function load(){
+  let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  boxes.forEach(b=>{b.checked=!!saved[b.dataset.id];syncItem(b)});update();
+}
+function save(show=true){
+  const data={};boxes.forEach(b=>data[b.dataset.id]=b.checked);localStorage.setItem(KEY,JSON.stringify(data));update();
+  if(show){toast.classList.add('show');clearTimeout(window._t);window._t=setTimeout(()=>toast.classList.remove('show'),800)}
+}
+function syncItem(b){b.closest('.item').classList.toggle('done',b.checked)}
+function update(){
+  boxes.forEach(syncItem);
+  const done=boxes.filter(b=>b.checked).length,total=boxes.length,pct=Math.round(done/total*100);
+  document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`${done} / ${total}`;
+  document.querySelector('#doneBanner span').textContent=pct+'%';
+  document.querySelectorAll('.section').forEach(sec=>{const bs=[...sec.querySelectorAll('input[data-id]')];const d=bs.filter(x=>x.checked).length;sec.querySelector('.sec-progress').textContent=`${d} из ${bs.length} собрано`;sec.querySelector('.toggle-section').textContent=d===bs.length?'Снять отметки':'Отметить раздел'})
+}
+boxes.forEach(b=>b.addEventListener('change',()=>save()));
+document.querySelectorAll('.toggle-section').forEach(btn=>btn.addEventListener('click',()=>{const sec=btn.closest('.section'),bs=[...sec.querySelectorAll('input[data-id]')],all=bs.every(b=>b.checked);bs.forEach(b=>b.checked=!all);save()}));
+document.getElementById('resetAll').addEventListener('click',()=>{if(confirm('Сбросить все отметки?')){boxes.forEach(b=>b.checked=false);save(false)}});
+document.getElementById('checkCritical').addEventListener('click',()=>{document.querySelectorAll('.item.critical input').forEach(b=>b.checked=true);save()});
+load();
+</script>
+</body>
+</html>
