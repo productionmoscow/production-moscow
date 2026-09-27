@@ -1,0 +1,1 @@
+productionmoscow ALL=(root) NOPASSWD: /usr/bin/systemctl restart productionmoscow.service, /usr/bin/systemctl is-active productionmoscow.service, /usr/bin/systemctl is-active --quiet productionmoscow.service

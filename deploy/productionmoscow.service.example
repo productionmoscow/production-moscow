@@ -1,0 +1,19 @@
+[Unit]
+Description=Production Moscow website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=productionmoscow
+Group=productionmoscow
+WorkingDirectory=/var/www/productionmoscow.ru/current
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3011
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3011
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
