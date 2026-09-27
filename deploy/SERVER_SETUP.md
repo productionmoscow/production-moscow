@@ -62,7 +62,7 @@ GitHub Actions не получает права администратора д�
 
 ## Secrets репозитория GitHub
 
-В `productionmoscow/production-moscow` нужно добавить следующие Actions
+В `productionmoscow/production-moscow` можно добавить отдельные Actions
 secrets:
 
 - `PRODUCTIONMOSCOW_SSH_HOST` — адрес VPS;
@@ -73,3 +73,9 @@ secrets:
 
 После этого любой push в `main` будет автоматически выкатывать новую версию.
 Ручной запуск доступен во вкладке Actions через `workflow_dispatch`.
+
+Для переходного запуска workflow также умеет использовать общие secrets,
+которые уже применяются в проектах Антона: `ANTON_SSH_HOST`,
+`ANTON_SSH_USER`, `ANTON_SSH_PORT` и `ANTON_SSH_KEY`. Отдельные
+`PRODUCTIONMOSCOW_*` имеют приоритет, если они заведены. Значение пути по
+умолчанию — `/var/www/productionmoscow.ru`.

@@ -39,9 +39,9 @@ jobs:
 
       - name: Prepare SSH
         env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT }}
-          SSH_KEY: ${{ secrets.PRODUCTIONMOSCOW_SSH_KEY }}
+          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST }}
+          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT }}
+          SSH_KEY: ${{ secrets.PRODUCTIONMOSCOW_SSH_KEY || secrets.ANTON_SSH_KEY }}
         run: |
           set -eu
           test -n "$SSH_HOST"
@@ -54,10 +54,10 @@ jobs:
 
       - name: Upload release
         env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH }}
+          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST }}
+          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER }}
+          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
         run: |
           set -eu
           test -n "$SSH_HOST"
@@ -81,10 +81,10 @@ jobs:
 
       - name: Activate release and verify local service
         env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH }}
+          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST }}
+          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER }}
+          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
         run: |
           set -eu
           SSH_PORT="${SSH_PORT:-22}"
@@ -108,10 +108,10 @@ jobs:
       - name: Remove old releases
         if: success()
         env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH }}
+          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST }}
+          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER }}
+          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
         run: |
           set -eu
           SSH_PORT="${SSH_PORT:-22}"
