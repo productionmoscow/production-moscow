@@ -128,7 +128,6 @@ test("event page renders all source videos, copy and FAQ", async () => {
 
 test("all remaining sitemap pages preserve original text, links, media and documents", async () => {
   const expected = {
-    "/food": ["ФУД ФОТО И МЕНЮ ПОД КЛЮЧ В МОСКВЕ", "https://heyzine.com/flip-book/b61cad3e63.html"],
     "/politika": ["Политика в отношении обработки персональных данных", "Федерального закона от 27.07.2006."],
     "/studio": ["Белое на Белом - студия предметной съемки", "https://youtu.be/8O5nBIbacZo"],
     "/kiselev": ["АНДРЕЙ КИСЕЛЕВ", "https://instagram.com/videokisel"],
@@ -147,6 +146,21 @@ test("all remaining sitemap pages preserve original text, links, media and docum
     assert.match(html, /class="source-record"/, pathname);
     assert.match(html, /class="source-inventory-grid"/, pathname);
   }
+
+  const food = await (await render("/food")).text();
+  assert.match(food, /Фуд-фото и меню/);
+  assert.match(food, /class="food-menu-frame"/);
+  assert.match(food, /https:\/\/heyzine\.com\/flip-book\/b61cad3e63\.html/);
+  assert.ok(food.indexOf("food-gallery-section") < food.indexOf("food-menu-section"));
+  assert.equal((food.match(/class="food-gallery-item"/g) ?? []).length, 37);
+  assert.equal((food.match(/<img src="https:\/\/static\.tildacdn\.com\//g) ?? []).length, 38);
+  assert.equal((food.match(/class="food-gallery-link"/g) ?? []).length, 37);
+  assert.doesNotMatch(food, /2025-01-20_121715\.jpg/);
+  assert.doesNotMatch(food, /tild3762-6266-4232-a166-346133363839\/__\.png/);
+  assert.match(food, /<h2>КОНТАКТЫ<\/h2>/);
+  assert.doesNotMatch(food, /ОСТАВЬТЕ КОНТАКТЫ/);
+  assert.doesNotMatch(food, /79585647717/);
+  assert.doesNotMatch(food, /Открыть оригинал/);
 
   const studio = await (await render("/studio")).text();
   assert.equal((studio.match(/class="source-video-card"/g) ?? []).length, 7);

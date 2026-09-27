@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { sourcePages, type SourcePageData } from "./source-pages-data";
 
 export type SitePage = "home" | "case" | "event" | "stream" | "food" | "politika" | "studio" | "kiselev" | "golf" | "pokavsedoma" | "vsacademy" | "gnivts" | "contact" | "conf";
@@ -16,24 +17,26 @@ const navItems = [
 
 type VideoWork = { title: string; duration?: string; href: string; embed?: string };
 
+const kinescopeEmbed = (id: string) => `https://kinescope.io/embed/${id}?autoplay=true&muted=true&controls=false&loop=true&autopause=false`;
+
 const vkVideo = (id: string, title: string, duration?: string): VideoWork => ({
   title,
   duration,
   href: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
-  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}&hd=2`,
+  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
 });
 
 const sourceVkVideo = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`): VideoWork => ({
   title,
   duration,
   href,
-  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}&hd=2`,
+  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
 });
 
 const showreel: VideoWork = {
   title: "ПОСМОТРИТЕ НАШ ШОУРИЛ",
   href: "https://kinescope.io/embed/jtfz36DqKYQ1TMvZeoSQRY",
-  embed: "https://kinescope.io/embed/jtfz36DqKYQ1TMvZeoSQRY",
+  embed: kinescopeEmbed("jtfz36DqKYQ1TMvZeoSQRY"),
 };
 
 const caseFilms = [
@@ -87,16 +90,16 @@ const streamFeatureVideo: VideoWork = {
   title: "Турнир по грэпплингу FSA",
   duration: "БЭКСТЕЙДЖ ТРАНСЛЯЦИИ",
   href: "https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue",
-  embed: "https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue",
+  embed: kinescopeEmbed("jCnWpQG5onNrYKL3A7fDue"),
 };
 
 const services = [
-  ["Прямые трансляции", "Организуем прямые трансляции мероприятий любого масштаба в Москве. Обеспечим многокамерную съемку, профессиональную графику и стабильное соединение для трансляции на любые онлайн-платформы"],
-  ["Фильмы для мероприятий", "Создаем документальные фильмы, которые показываем на крупнейших мероприятиях - как достижения компании или семейные фильмы на юбилей"],
-  ["Промо-ролики", "Создаем эффективные промо-ролики, которые привлекают внимание к вашему личному бренду и вашему продукту, повышая узнаваемость в индустрии и, как следствие ваши продажи"],
-  ["Съемка мероприятий", "Осуществляем видеосъемку и трансляцию мероприятий различного формата, гарантируя вдумчивый подход и качественный результат. Мы снимаем мероприятия с 2009 года."],
-  ["Музыкальные клипы для кавер-групп", "Предлагаем профессиональную съемку музыкальных клипов для кавер-групп в Москве, помогая им выделиться из общей массы, повысить продажи и привлечь новую аудиторию"],
-  ["Документальные фильмы", "Мы беремся за сложные, крупные и вдумчивые проекты с большим удовольствием. Степень нашей увлеченности документальным фильмом зависит конечно же от необычности проекта и от бюджета"],
+  ["Прямые трансляции", "Организуем прямые трансляции мероприятий любого масштаба в Москве. Обеспечим многокамерную съемку, профессиональную графику и стабильное соединение для трансляции на любые онлайн-платформы", "/stream"],
+  ["Фильмы для мероприятий", "Создаем документальные фильмы, которые показываем на крупнейших мероприятиях - как достижения компании или семейные фильмы на юбилей", "/case#films"],
+  ["Промо-ролики", "Создаем эффективные промо-ролики, которые привлекают внимание к вашему личному бренду и вашему продукту, повышая узнаваемость в индустрии и, как следствие ваши продажи", "/case#promos"],
+  ["Съемка мероприятий", "Осуществляем видеосъемку и трансляцию мероприятий различного формата, гарантируя вдумчивый подход и качественный результат. Мы снимаем мероприятия с 2009 года.", "/event"],
+  ["Музыкальные клипы для кавер-групп", "Предлагаем профессиональную съемку музыкальных клипов для кавер-групп в Москве, помогая им выделиться из общей массы, повысить продажи и привлечь новую аудиторию", "/case#projects"],
+  ["Документальные фильмы", "Мы беремся за сложные, крупные и вдумчивые проекты с большим удовольствием. Степень нашей увлеченности документальным фильмом зависит конечно же от необычности проекта и от бюджета", "/case#films"],
 ] as const;
 
 const principles = [
@@ -209,7 +212,7 @@ function Footer() {
   return <footer className="site-footer">
     <div className="footer-mark" aria-hidden="true">*</div>
     <div><p className="footer-kicker">ProductionMoscow.ru</p><p className="footer-copy">Мы предлагаем прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий.<br />Работаем по всей России, базируемся в Москве.<br />Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p></div>
-    <div className="footer-links"><ContactPhones compact /><a className="footer-source-phone" href="tel:+79585647717">+79585647717 - Андрей</a><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="https://vk.com/prodmskru" target="_blank" rel="noreferrer">ВКонтакте</a><a href="http://productionmoscow.ru" target="_blank" rel="noreferrer">ProductionMoscow.ru</a><a href="/conf">Контакты</a></div>
+    <div className="footer-links"><ContactPhones compact /><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="https://vk.com/prodmskru" target="_blank" rel="noreferrer">ВКонтакте</a><a href="http://productionmoscow.ru" target="_blank" rel="noreferrer">ProductionMoscow.ru</a><a href="/conf">Контакты</a></div>
     <div className="footer-bottom"><span>ProductionMoscow.ru</span><a href="/contact">Контакты ↗</a></div>
   </footer>;
 }
@@ -226,9 +229,8 @@ function HomePage() {
       <div className="hero-video"><VideoEmbed video={showreel} showMeta={false} /><div className="hero-video-foot"><h2>ПОСМОТРИТЕ НАШ ШОУРИЛ<span className="accent">*</span></h2><p>За минуту вы поймете наш стиль и уровень</p></div></div>
     </section>
 
-    <section className="lined-section production-services reveal"><SectionHead number="02" title="Что мы можем?" emphasizeNumber>Список сервисов, которые мы предоставляем</SectionHead><div className="service-answers production-services-grid">{services.map(([title, description]) => <article key={title}><h3>{title}</h3><p>{description}</p></article>)}</div></section>
+    <section className="lined-section production-services reveal"><SectionHead number="02" title="Что мы можем?" emphasizeNumber>Список сервисов, которые мы предоставляем</SectionHead><div className="service-answers production-services-grid">{services.map(([title, description, href]) => <article key={title}><Link className="service-card" href={href}><h3>{title}</h3><p>{description}</p></Link></article>)}</div></section>
     <section className="lined-section production-why reveal"><SectionHead number="03" title="Почему мы?">Есть несколько отличительных особенностей,<br />за которые нас выбирают</SectionHead><div className="production-principles-grid">{principles.map(([title, description], index) => <article key={title}><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{description}</p></article>)}</div></section>
-    <section className="lined-section production-contact-prompt reveal"><p className="eyebrow">productionmoscow.ru</p><h2>Мы сами можем с вами связаться</h2><p>Просто оставьте нам свои контакты</p><ContactMethods /><ArrowLink href="/contact">Отправить</ArrowLink></section>
     <section className="lined-section production-thanks reveal"><SectionHead number="04" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="production-thanks-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
     <section className="contact-banner reveal"><div><p className="small-label">05 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
@@ -237,9 +239,9 @@ function HomePage() {
 function CasePage() {
   return <Shell current="case">
     <section className="page-intro reveal"><div className="intro-number">01</div><div><p className="eyebrow">ИВЕНТ-ПРОДАКШН</p><h1>Портфолио<br />видеопродакшна<br />Production Moscow</h1></div></section>
-    <section className="lined-section production-portfolio-section reveal"><SectionHead number="02" title="Фильмы для показа на мероприятях" /><p className="section-lead">Мы любим снимать сложные и интересные фильмы к определенным мероприятиям - будь то День рождения компании или человека. Как правило - это большой объемный проект со сценарием, несколькими съемочными днями и обстоятельным монтажом. Это то, что мы делаем лучше всего.</p><VideoGallery videos={caseFilms} /></section>
-    <section className="lined-section production-portfolio-section reveal"><SectionHead number="03" title="Промо-ролики" /><p className="section-lead">Ведущим, агентствам, декораторам, диджеям, всем-всем-всем</p><VideoGallery videos={casePromos} /></section>
-    <section className="lined-section production-portfolio-section reveal"><SectionHead number="04" title="Проекты" /><p className="section-lead">Мы любим снимать необычные и обычные проекты - подкасты, стендапы, интервью (которые у нас лучше всего получаются), спортивные мероприятия, мастер-классы</p><VideoGallery videos={caseProjects} /></section>
+    <section id="films" className="lined-section production-portfolio-section reveal"><SectionHead number="02" title="Фильмы для показа на мероприятях" /><p className="section-lead">Мы любим снимать сложные и интересные фильмы к определенным мероприятиям - будь то День рождения компании или человека. Как правило - это большой объемный проект со сценарием, несколькими съемочными днями и обстоятельным монтажом. Это то, что мы делаем лучше всего.</p><VideoGallery videos={caseFilms} /></section>
+    <section id="promos" className="lined-section production-portfolio-section reveal"><SectionHead number="03" title="Промо-ролики" /><p className="section-lead">Ведущим, агентствам, декораторам, диджеям, всем-всем-всем</p><VideoGallery videos={casePromos} /></section>
+    <section id="projects" className="lined-section production-portfolio-section reveal"><SectionHead number="04" title="Проекты" /><p className="section-lead">Мы любим снимать необычные и обычные проекты - подкасты, стендапы, интервью (которые у нас лучше всего получаются), спортивные мероприятия, мастер-классы</p><VideoGallery videos={caseProjects} /></section>
     <section className="contact-banner event-contact reveal"><div><p className="small-label">05 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
 }
@@ -279,7 +281,7 @@ function sourceVideoEmbed(url: string) {
   if (url.includes("youtube.com/watch")) return `https://www.youtube.com/embed/${new URL(url).searchParams.get("v") || ""}`;
   if (url.includes("vk.com/video-")) {
     const match = url.match(/video-(-?\d+)_([0-9]+)/);
-    return match ? `https://vk.com/video_ext.php?oid=-${match[1].replace(/^-/, "")}&id=${match[2]}&hd=2` : url;
+    return match ? `https://vk.com/video_ext.php?oid=-${match[1].replace(/^-/, "")}&id=${match[2]}` : url;
   }
   return url;
 }
@@ -302,11 +304,93 @@ function SourcePage({ current, data }: { current: SitePage; data: SourcePageData
   </Shell>;
 }
 
+const foodPage = sourcePages["/food"];
+const foodMenuUrl = foodPage.mediaUrls.find((url) => url.includes("heyzine.com/flip-book")) || "https://heyzine.com/flip-book/b61cad3e63.html";
+
+/* eslint-disable @next/next/no-img-element */
+function FoodGalleryImage({ src, index, onSelect }: { src: string; index: number; onSelect: () => void }) {
+  return <figure className="food-gallery-item"><button className="food-gallery-link" type="button" onClick={onSelect} aria-label={`Открыть фуд-фотографию ${index + 1}`}><img src={src} alt={`Фуд-фотография Production Moscow ${index + 1}`} loading={index < 4 ? "eager" : "lazy"} /></button></figure>;
+}
+
+function FoodGallery({ images }: { images: string[] }) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const selectedImage = selectedIndex === null ? null : images[selectedIndex];
+
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedIndex(null);
+      if (event.key === "ArrowLeft") setSelectedIndex((current) => current === null ? null : (current - 1 + images.length) % images.length);
+      if (event.key === "ArrowRight") setSelectedIndex((current) => current === null ? null : (current + 1) % images.length);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [images.length, selectedIndex]);
+
+  const move = (direction: -1 | 1) => setSelectedIndex((current) => current === null ? null : (current + direction + images.length) % images.length);
+
+    const lightbox = selectedImage ? <div className="food-lightbox" role="dialog" aria-modal="true" aria-label="Галерея фуд-фотографий">
+      <div className="food-lightbox-content">
+        <div className="food-lightbox-top"><span>{String((selectedIndex || 0) + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}</span><button type="button" className="food-lightbox-close" onClick={() => setSelectedIndex(null)} aria-label="Закрыть галерею">Закрыть ×</button></div>
+        <div className="food-lightbox-stage"><button type="button" className="food-lightbox-arrow food-lightbox-arrow-prev" onClick={() => move(-1)} aria-label="Предыдущее изображение">←</button><img src={selectedImage} alt={`Фуд-фотография Production Moscow ${(selectedIndex || 0) + 1}`} /><button type="button" className="food-lightbox-arrow food-lightbox-arrow-next" onClick={() => move(1)} aria-label="Следующее изображение">→</button></div>
+        <div className="food-lightbox-thumbs" aria-label="Миниатюры галереи">{images.map((src, index) => <button className={index === selectedIndex ? "selected" : ""} type="button" key={src} onClick={() => setSelectedIndex(index)} aria-label={`Показать фотографию ${index + 1}`}><img src={src} alt="" /></button>)}</div>
+      </div>
+    </div> : null;
+
+    return <>
+      <div className="food-gallery">{images.map((src, index) => <FoodGalleryImage key={src} src={src} index={index} onSelect={() => setSelectedIndex(index)} />)}</div>
+      {lightbox && typeof document !== "undefined" ? createPortal(lightbox, document.body) : null}
+    </>;
+}
+/* eslint-enable @next/next/no-img-element */
+
+function FoodPage() {
+  const heroImage = foodPage.imageUrls[2] || foodPage.imageUrls[0];
+  const galleryImages = foodPage.imageUrls.filter((_, index) => index >= 3);
+
+  return <Shell current="food">
+    <section className="food-hero reveal">
+      <div className="food-hero-copy">
+        <p className="eyebrow">ФУД-ФОТО // PRODUCTION MOSCOW</p>
+        <h1>Фуд-фото и меню<br />под ключ в Москве<span className="accent">*</span></h1>
+        <p className="food-hero-description">Полный цикл производства контента для ресторанов, кафе и сервисов доставки еды.</p>
+      </div>
+      <div className="food-hero-media"><img src={heroImage} alt="Фуд-фотография Production Moscow" />{/* eslint-disable-line @next/next/no-img-element */}</div>
+    </section>
+    <section className="lined-section food-gallery-section reveal">
+      <SectionHead number="02" title="Нам есть что показать">Картинки важнее слов. Наши работы лучше всего нас продают.</SectionHead>
+      <FoodGallery images={galleryImages} />
+    </section>
+    <section className="lined-section food-menu-section reveal">
+      <SectionHead number="03" title="Меню под ключ">Полистайте пример меню, которое мы создаём для ресторанов и сервисов доставки</SectionHead>
+      <div className="food-menu-layout">
+        <p className="food-menu-label">productionmoscow.ru<br /><span>Меню под ключ</span></p>
+        <div className="food-menu-frame"><iframe src={foodMenuUrl} title="Пример меню под ключ" loading="lazy" allow="fullscreen" /></div>
+      </div>
+    </section>
+    <section className="lined-section food-story-section reveal">
+      <SectionHead number="04" title="Фотография еды, которая продаёт">Красивый и реалистичный визуал помогает привлечь и удержать клиентов ресторана или сервиса доставки.</SectionHead>
+      <div className="food-story-grid">
+        <p>Рестораны и службы доставки — важные игроки в гастрономической индустрии. Одна из самых важных задач для них — привлечение и удержание клиентов. Фотографии еды — мощный инструмент для решения этой задачи.</p>
+        <div><p>Фотографии еды — это первый взгляд на продукт, который покупатель видит, прежде чем сделать заказ. Они должны быть качественными, привлекательными и реалистичными.</p><p>Если фотографии выглядят вкусно и привлекательно, это повышает вероятность, что люди закажут их в вашем ресторане или службе доставки.</p></div>
+      </div>
+    </section>
+    <section className="contact-banner event-contact reveal">
+      <div><p className="small-label">05 / Контакты</p><h2>КОНТАКТЫ</h2></div>
+      <div className="contact-banner-action"><ContactMethods /><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div>
+    </section>
+  </Shell>;
+}
+
 export default function Site({ page = "home" }: { page?: SitePage }) {
   if (page === "case") return <CasePage />;
   if (page === "event") return <EventPage />;
   if (page === "stream") return <StreamPage />;
-  if (page === "food") return <SourcePage current="food" data={sourcePages["/food"]} />;
+  if (page === "food") return <FoodPage />;
   if (page === "politika") return <SourcePage current="politika" data={sourcePages["/politika"]} />;
   if (page === "studio") return <SourcePage current="studio" data={sourcePages["/studio"]} />;
   if (page === "kiselev") return <SourcePage current="kiselev" data={sourcePages["/kiselev"]} />;
