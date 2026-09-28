@@ -79,3 +79,9 @@ secrets:
 `ANTON_SSH_USER`, `ANTON_SSH_PORT` и `ANTON_SSH_KEY`. Отдельные
 `PRODUCTIONMOSCOW_*` имеют приоритет, если они заведены. Значение пути по
 умолчанию — `/var/www/productionmoscow.ru`.
+
+Для общего production-сервера CLEVENT также поддерживается набор
+`CLEVENT_SSH_HOST`, `CLEVENT_SSH_USER`, `CLEVENT_SSH_PORT` и
+`CLEVENT_SSH_KEY`. Приоритет остаётся за `PRODUCTIONMOSCOW_*`, затем идут
+`ANTON_*`, затем `CLEVENT_*`; путь Production Moscow всегда остаётся
+отдельным.
