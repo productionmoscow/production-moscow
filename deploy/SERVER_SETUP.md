@@ -1,87 +1,78 @@
-# Автоматический деплой ProductionMoscow.ru
+# Локальный деплой Production Moscow на Mac mini
 
-После настройки push в `main` запускает GitHub Actions. Workflow проверяет
-lint, production-сборку и rendered HTML-тесты, затем отправляет готовый `dist`
-на VPS, переключает симлинк `current` на новый release и перезапускает отдельный
-процесс `productionmoscow.service`.
+Production Moscow разворачивается только локальным self-hosted runner’ом
+репозитория `productionmoscow/production-moscow`. SSH-доступ, SSH-секреты и
+fallback-секреты других проектов для деплоя не используются.
 
-Сайт работает отдельно от CLEVENT и других проектов:
+Runner хранится отдельно от существующих runner’ов: его каталог —
+`/Users/clevent/server/productionmoscow/runner`, launchd label —
+`com.productionmoscow.github-runner`, имя — `mac-mini-productionmoscow`,
+labels — `self-hosted`, `mac-mini`, `arm64`.
 
-- каталог: `/var/www/productionmoscow.ru`;
-- внутренний порт Node.js: `3011`;
-- systemd-сервис: `productionmoscow.service`;
-- пользователь деплоя: `productionmoscow`.
+## Изоляция
 
-## Одноразовая настройка VPS
+- production-каталог: `/Users/clevent/server/sites/production-moscow`;
+- релизы: `/Users/clevent/server/sites/production-moscow/releases/<commit>`;
+- текущий релиз: `/Users/clevent/server/sites/production-moscow/current`;
+- launchd label: `com.productionmoscow.website`;
+- локальный endpoint: `127.0.0.1:3011`;
+- Caddy hostnames: только `productionmoscow.ru` и `www.productionmoscow.ru`.
 
-Команды ниже выполняются на сервере с правами администратора.
+Node-приложение запускается как отдельный native-процесс Mac и слушает только
+`127.0.0.1:3011`. Caddy работает в Docker, поэтому отдельный bridge-контейнер
+только в namespace Caddy переносит запросы Caddy на host-only endpoint. Он не
+публикует порт и не перезапускает другие контейнеры.
 
-1. Установить Node.js `22.13.x`, `npm`, `rsync` и Nginx.
-2. Создать отдельного пользователя и каталоги:
+## Одноразовая установка launchd
 
-   ```bash
-   sudo useradd --create-home --shell /bin/bash productionmoscow
-   sudo install -d -o productionmoscow -g productionmoscow /var/www/productionmoscow.ru/releases
-   ```
+После первого локального релиза:
 
-3. Добавить публичный SSH-ключ GitHub Actions в
-   `/home/productionmoscow/.ssh/authorized_keys`.
-4. Скопировать `productionmoscow.service.example` в
-   `/etc/systemd/system/productionmoscow.service`, затем выполнить:
+```bash
+install -d -m 755 /Users/clevent/server/sites/production-moscow/logs
+install -m 644 deploy/macos/com.productionmoscow.website.plist \
+  "$HOME/Library/LaunchAgents/com.productionmoscow.website.plist"
+launchctl bootstrap "gui/$(id -u)" \
+  "$HOME/Library/LaunchAgents/com.productionmoscow.website.plist"
+launchctl enable "gui/$(id -u)/com.productionmoscow.website"
+launchctl kickstart -k "gui/$(id -u)/com.productionmoscow.website"
+```
 
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable productionmoscow.service
-   ```
+В Actions используется ровно такой же label и перезапускается только этот
+launchd-сервис.
 
-5. Скопировать `productionmoscow.sudoers.example` в
-   `/etc/sudoers.d/productionmoscow`, выставить права и проверить файл:
+## Caddy
 
-   ```bash
-   sudo chmod 440 /etc/sudoers.d/productionmoscow
-   sudo visudo -cf /etc/sudoers.d/productionmoscow
-   ```
+В `/Users/clevent/server/migration/caddy/Caddyfile` добавляются только эти
+два блока; существующие блоки других доменов не редактируются:
 
-6. Скопировать `productionmoscow.nginx.example` в конфигурацию Nginx,
-   включить сайт и проверить конфигурацию:
+```caddyfile
+productionmoscow.ru {
+    reverse_proxy 127.0.0.1:3011
+}
 
-   ```bash
-   sudo nginx -t
-   sudo systemctl reload nginx
-   ```
+www.productionmoscow.ru {
+    reverse_proxy 127.0.0.1:3011
+}
+```
 
-7. После проверки DNS выпустить сертификат Let's Encrypt:
+Проверка и reload выполняются без пересоздания других контейнеров:
 
-   ```bash
-   sudo certbot --nginx -d productionmoscow.ru -d www.productionmoscow.ru --redirect
-   ```
+```bash
+docker_bin=/Users/clevent/.docker/bin/docker
+compose_file=/Users/clevent/server/migration/compose.yaml
+"$docker_bin" compose -f "$compose_file" exec -T edge \
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+"$docker_bin" compose -f "$compose_file" exec -T edge \
+  caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+```
 
-GitHub Actions не получает права администратора для управления Nginx или
-сертификатами. Ему разрешён только перезапуск и проверка конкретного systemd-
-сервиса.
+## Проверки
 
-## Secrets репозитория GitHub
+```bash
+curl -fsS http://127.0.0.1:3011/
+curl -I https://productionmoscow.ru/
+curl -I https://www.productionmoscow.ru/
+```
 
-В `productionmoscow/production-moscow` можно добавить отдельные Actions
-secrets:
-
-- `PRODUCTIONMOSCOW_SSH_HOST` — адрес VPS;
-- `PRODUCTIONMOSCOW_SSH_USER` — `productionmoscow`;
-- `PRODUCTIONMOSCOW_SSH_PORT` — обычно `22`;
-- `PRODUCTIONMOSCOW_SSH_KEY` — приватный ключ для отдельного deploy key;
-- `PRODUCTIONMOSCOW_DEPLOY_PATH` — `/var/www/productionmoscow.ru`.
-
-После этого любой push в `main` будет автоматически выкатывать новую версию.
-Ручной запуск доступен во вкладке Actions через `workflow_dispatch`.
-
-Для переходного запуска workflow также умеет использовать общие secrets,
-которые уже применяются в проектах Антона: `ANTON_SSH_HOST`,
-`ANTON_SSH_USER`, `ANTON_SSH_PORT` и `ANTON_SSH_KEY`. Отдельные
-`PRODUCTIONMOSCOW_*` имеют приоритет, если они заведены. Значение пути по
-умолчанию — `/var/www/productionmoscow.ru`.
-
-Для общего production-сервера CLEVENT также поддерживается набор
-`CLEVENT_SSH_HOST`, `CLEVENT_SSH_USER`, `CLEVENT_SSH_PORT` и
-`CLEVENT_SSH_KEY`. Приоритет остаётся за `PRODUCTIONMOSCOW_*`, затем идут
-`ANTON_*`, затем `CLEVENT_*`; путь Production Moscow всегда остаётся
-отдельным.
+Публикация использует только уже настроенные DNS-записи. DNS из этого
+репозитория или workflow не изменяется.

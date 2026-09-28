@@ -14,7 +14,13 @@ permissions:
 
 jobs:
   verify-and-deploy:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, mac-mini, arm64]
+
+    env:
+      DEPLOY_ROOT: /Users/clevent/server/sites/production-moscow
+      SERVICE_LABEL: com.productionmoscow.website
+      DOCKER_BIN: /Users/clevent/.docker/bin/docker
+      EDGE_COMPOSE_FILE: /Users/clevent/server/migration/compose.yaml
 
     steps:
       - name: Checkout
@@ -37,97 +43,66 @@ jobs:
       - name: Build and rendered checks
         run: npm test
 
-      - name: Prepare SSH
-        env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST || secrets.CLEVENT_SSH_HOST }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT || secrets.CLEVENT_SSH_PORT }}
-          SSH_KEY: ${{ secrets.PRODUCTIONMOSCOW_SSH_KEY || secrets.ANTON_SSH_KEY || secrets.CLEVENT_SSH_KEY }}
+      - name: Deploy release locally
         run: |
-          set -eu
-          test -n "$SSH_HOST"
-          test -n "$SSH_KEY"
-          SSH_PORT="${SSH_PORT:-22}"
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/productionmoscow_deploy_key
-          chmod 600 ~/.ssh/productionmoscow_deploy_key
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          set -euo pipefail
+          test -x "$DOCKER_BIN"
+          test -f deploy/macos/productionmoscow-start.sh
+          test -f deploy/macos/productionmoscow-bridge.mjs
 
-      - name: Upload release
-        env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST || secrets.CLEVENT_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER || secrets.CLEVENT_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT || secrets.CLEVENT_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
+          install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
+          release="$DEPLOY_ROOT/releases/$GITHUB_SHA"
+          rm -rf -- "$release"
+          install -d -m 755 "$release"
+          rsync -a --checksum dist/ "$release/dist/"
+          install -m 644 package.json package-lock.json "$release/"
+          install -m 755 deploy/macos/productionmoscow-start.sh \
+            "$DEPLOY_ROOT/bin/productionmoscow-start.sh"
+          install -m 644 deploy/macos/productionmoscow-bridge.mjs \
+            "$DEPLOY_ROOT/bin/productionmoscow-bridge.mjs"
+
+          "$DEPLOY_ROOT/runtime/node/bin/npm" ci \
+            --prefix "$release" --ignore-scripts --no-audit --no-fund
+
+          ln -sfn "$release" "$DEPLOY_ROOT/current"
+
+      - name: Restart only Production Moscow and verify local service
         run: |
-          set -eu
-          test -n "$SSH_HOST"
-          test -n "$SSH_USER"
-          test -n "$DEPLOY_PATH"
-          SSH_PORT="${SSH_PORT:-22}"
-          RELEASE_PATH="${DEPLOY_PATH%/}/releases/${GITHUB_SHA}"
-          ssh -i ~/.ssh/productionmoscow_deploy_key -p "$SSH_PORT" \
-            "${SSH_USER}@${SSH_HOST}" \
-            "mkdir -p '$RELEASE_PATH'"
-          rsync -az --delete --checksum \
-            -e "ssh -i ~/.ssh/productionmoscow_deploy_key -p ${SSH_PORT}" \
-            dist/ "${SSH_USER}@${SSH_HOST}:${RELEASE_PATH}/dist/"
-          rsync -az --checksum \
-            -e "ssh -i ~/.ssh/productionmoscow_deploy_key -p ${SSH_PORT}" \
-            package.json package-lock.json \
-            "${SSH_USER}@${SSH_HOST}:${RELEASE_PATH}/"
-          ssh -i ~/.ssh/productionmoscow_deploy_key -p "$SSH_PORT" \
-            "${SSH_USER}@${SSH_HOST}" \
-            "cd '$RELEASE_PATH' && npm ci --ignore-scripts --no-audit --no-fund"
+          set -euo pipefail
+          service="gui/$(id -u)/$SERVICE_LABEL"
+          launchctl print "$service" >/dev/null
+          launchctl kickstart -k "$service"
 
-      - name: Activate release and verify local service
-        env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST || secrets.CLEVENT_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER || secrets.CLEVENT_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT || secrets.CLEVENT_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
-        run: |
-          set -eu
-          SSH_PORT="${SSH_PORT:-22}"
-          DEPLOY_PATH="${DEPLOY_PATH%/}"
-          RELEASE_PATH="$DEPLOY_PATH/releases/${GITHUB_SHA}"
-          ssh -i ~/.ssh/productionmoscow_deploy_key -p "$SSH_PORT" \
-            "${SSH_USER}@${SSH_HOST}" \
-            "set -e
-            ln -sfn '$RELEASE_PATH' '$DEPLOY_PATH/current'
-            sudo systemctl restart productionmoscow.service
-            for attempt in \$(seq 1 30); do
-              if sudo systemctl is-active --quiet productionmoscow.service && curl -fsS --max-time 5 http://127.0.0.1:3011/ >/dev/null; then
-                exit 0
-              fi
-              sleep 2
-            done
-            echo 'Production Moscow service did not become healthy within 60 seconds' >&2
-            sudo systemctl is-active productionmoscow.service || true
-            exit 1"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 5 \
+              http://127.0.0.1:3011/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
 
-      - name: Remove old releases
+          echo 'Production Moscow service did not become healthy within 60 seconds' >&2
+          launchctl print "$service" || true
+          exit 1
+
+      - name: Remove old Production Moscow releases
         if: success()
-        env:
-          SSH_HOST: ${{ secrets.PRODUCTIONMOSCOW_SSH_HOST || secrets.ANTON_SSH_HOST || secrets.CLEVENT_SSH_HOST }}
-          SSH_USER: ${{ secrets.PRODUCTIONMOSCOW_SSH_USER || secrets.ANTON_SSH_USER || secrets.CLEVENT_SSH_USER }}
-          SSH_PORT: ${{ secrets.PRODUCTIONMOSCOW_SSH_PORT || secrets.ANTON_SSH_PORT || secrets.CLEVENT_SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.PRODUCTIONMOSCOW_DEPLOY_PATH || '/var/www/productionmoscow.ru' }}
         run: |
-          set -eu
-          SSH_PORT="${SSH_PORT:-22}"
-          DEPLOY_PATH="${DEPLOY_PATH%/}"
-          ssh -i ~/.ssh/productionmoscow_deploy_key -p "$SSH_PORT" \
-            "${SSH_USER}@${SSH_HOST}" \
-            "CURRENT_RELEASE=\$(readlink -f '$DEPLOY_PATH/current' || true)
-            KEEP=4
-            find '$DEPLOY_PATH/releases' -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\\n' | sort -nr | cut -d' ' -f2- |
-            while IFS= read -r release; do
-              if [ \"\$release\" = \"\$CURRENT_RELEASE\" ]; then
-                continue
-              fi
-              if [ \"\$KEEP\" -gt 0 ]; then
-                KEEP=\$((KEEP - 1))
-              else
-                rm -rf -- \"\$release\"
-              fi
-            done"
+          set -euo pipefail
+          current_release="$(readlink "$DEPLOY_ROOT/current" || true)"
+          keep=4
+
+          find "$DEPLOY_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -print0 \
+            | xargs -0 -n1 stat -f '%m %N' \
+            | sort -rn \
+            | cut -d' ' -f2- \
+            | while IFS= read -r release; do
+                if [ "$release" = "$current_release" ]; then
+                  continue
+                fi
+                if [ "$keep" -gt 0 ]; then
+                  keep=$((keep - 1))
+                else
+                  rm -rf -- "$release"
+                fi
+              done
