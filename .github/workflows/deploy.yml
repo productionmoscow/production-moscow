@@ -44,6 +44,8 @@ jobs:
         run: npm test
 
       - name: Deploy release locally
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
           test -x "$DOCKER_BIN"
@@ -52,6 +54,12 @@ jobs:
 
           install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
           install -d -m 700 "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/config"
+          if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+            umask 077
+            printf 'OPENROUTER_API_KEY=%s\nPRODUCTIONMOSCOW_AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free\nPRODUCTIONMOSCOW_AI_BASE_URL=https://openrouter.ai/api/v1\n' \
+              "$OPENROUTER_API_KEY" > "$DEPLOY_ROOT/config/productionmoscow.env"
+            chmod 600 "$DEPLOY_ROOT/config/productionmoscow.env"
+          fi
           release="$DEPLOY_ROOT/releases/$GITHUB_SHA"
           rm -rf -- "$release"
           install -d -m 755 "$release"
