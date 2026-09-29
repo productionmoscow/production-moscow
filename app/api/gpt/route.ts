@@ -16,15 +16,29 @@ const MAX_MESSAGES = 12;
 const requests = new Map<string, { count: number; resetAt: number }>();
 
 function tokenize(value: string) {
-  return value.toLocaleLowerCase("ru-RU").match(/[\p{L}\p{N}]{3,}/gu) ?? [];
+  const stopWords = new Set(["без", "быть", "вам", "вас", "ведь", "вот", "все", "всё", "вы", "где", "для", "если", "или", "как", "кто", "мы", "над", "нас", "наш", "нужен", "нужно", "об", "они", "оно", "от", "по", "под", "при", "про", "сво", "так", "такой", "там", "то", "тоже", "только", "что", "это", "я"]);
+  return (value.toLocaleLowerCase("ru-RU").match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((token) => !stopWords.has(token));
 }
 
 function retrieve(query: string): GptKnowledgeChunk[] {
   const queryTokens = new Set(tokenize(query));
+  const queryText = query.toLocaleLowerCase("ru-RU");
+  const intentBoosts = new Map<string, number>();
+  if (/(сним|видеосъём|видеосъем|меропр|событ)/u.test(queryText)) {
+    intentBoosts.set("event-production", 8);
+    intentBoosts.set("promos", 4);
+    intentBoosts.set("films", 3);
+  }
+  if (/(трансляц|эфир|стрим|онлайн)/u.test(queryText)) {
+    intentBoosts.set("live-streams", 8);
+    intentBoosts.set("stream-faq", 6);
+  }
+  if (/(фильм|документ|юбилей|ролик для меропр)/u.test(queryText)) intentBoosts.set("films", 8);
+  if (/(промо|клип|подкаст|интервью|кейс|портфолио)/u.test(queryText)) intentBoosts.set("promos", 8);
   const scored = gptKnowledge.map((chunk) => {
     const haystack = `${chunk.title} ${chunk.content}`.toLocaleLowerCase("ru-RU");
     const tokens = tokenize(haystack);
-    let score = 0;
+    let score = intentBoosts.get(chunk.id) || 0;
     for (const token of queryTokens) {
       if (haystack.includes(token)) score += tokens.includes(token) ? 2 : 1;
     }
