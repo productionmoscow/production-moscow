@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/vsacademy",
     "/gnivts",
     "/contact",
+    "/gpt",
     "/conf",
   ].map((path) => ({
     url: `${SITE_URL}${path}`,

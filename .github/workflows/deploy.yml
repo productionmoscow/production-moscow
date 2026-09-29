@@ -51,6 +51,7 @@ jobs:
           test -f deploy/macos/productionmoscow-bridge.mjs
 
           install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
+          install -d -m 700 "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/config"
           release="$DEPLOY_ROOT/releases/$GITHUB_SHA"
           rm -rf -- "$release"
           install -d -m 755 "$release"

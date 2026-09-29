@@ -49,6 +49,13 @@ export PATH="$NODE_BIN:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:
 export NODE_ENV=production
 export HOST=127.0.0.1
 export PORT=3011
+env_file="$DEPLOY_ROOT/config/productionmoscow.env"
+if [[ -f "$env_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$env_file"
+  set +a
+fi
 cd "$current"
 "$NODE_BIN/npm" run start -- --hostname 127.0.0.1 --port 3011 &
 app_pid=$!

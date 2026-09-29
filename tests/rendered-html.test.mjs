@@ -50,6 +50,7 @@ test("all Production Moscow public routes render their primary content", async (
     "/event": "Съёмка корпоративных мероприятий",
     "/stream": "ПРЯМЫЕ",
     "/contact": "Мы сами можем",
+    "/gpt": "GPT Production Moscow",
     "/conf": "Политика в отношении обработки персональных данных",
   };
 
@@ -181,7 +182,7 @@ test("crawler metadata exposes the new canonical host", async () => {
   const sitemapResponse = await render("/sitemap.xml");
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
-  for (const path of ["/", "/case", "/event", "/stream", "/food", "/politika", "/studio", "/kiselev", "/golf", "/pokavsedoma", "/vsacademy", "/gnivts", "/contact", "/conf"]) {
+  for (const path of ["/", "/case", "/event", "/stream", "/food", "/politika", "/studio", "/kiselev", "/golf", "/pokavsedoma", "/vsacademy", "/gnivts", "/contact", "/gpt", "/conf"]) {
     assert.match(sitemap, new RegExp(`<loc>https://www\\.productionmoscow\\.ru${path}<\\/loc>`));
   }
   assert.doesNotMatch(sitemap, /antonchernov|promodemo|wedding|\/mk/);
