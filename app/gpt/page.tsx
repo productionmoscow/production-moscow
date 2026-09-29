@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Site from "../site";
 
 export const metadata: Metadata = {
-  title: "GPT Production Moscow — обсудить задачу",
+  title: "AI-ассистент Production Moscow — обсудить задачу",
   description: "AI-ассистент Production Moscow: ответы об услугах, кейсах и помощь с заявкой на видеопродакшн.",
   alternates: { canonical: "/gpt" },
 };

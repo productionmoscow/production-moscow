@@ -296,10 +296,9 @@ function GptPage() {
 
   return <Shell current="gpt">
     <section className="gpt-page reveal">
-      <div className="gpt-intro">
-        <div className="gpt-intro-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
-        <div className="gpt-intro-main"><span className="gpt-number">06</span><h1>Поговорим<br /><span>о задаче</span><i>*</i></h1><p>AI-ассистент продакшна. Ответит по материалам Production Moscow и поможет передать задачу команде.</p></div>
-        <div className="gpt-intro-note">/ Задайте вопрос<br />/ Получите ориентир<br />/ Оставьте контакт</div>
+      <div className="gpt-assistant-banner">
+        <div className="gpt-assistant-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
+        <h1>AI-ассистент<i>*</i></h1>
       </div>
       <div className="gpt-workspace">
         <div className="gpt-workspace-head"><div><span className="small-label">01 / Диалог</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
