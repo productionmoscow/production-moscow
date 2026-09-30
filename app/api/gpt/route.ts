@@ -3,7 +3,15 @@ import { dirname } from "node:path";
 import { gptKnowledge, type GptKnowledgeChunk } from "../../gpt-knowledge";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-type ConversationIntent = "greeting" | "thanks" | "chat" | "contact" | "pricing" | "service" | "general";
+type ConversationIntent = "greeting" | "thanks" | "chat" | "contact" | "pricing" | "project" | "service" | "general";
+type ProjectDetails = {
+  city?: string;
+  eventDate?: string;
+  duration?: string;
+  guests?: string;
+  format?: string;
+  deadline?: string;
+};
 type Lead = {
   name?: string;
   contact?: string;
@@ -41,12 +49,21 @@ function isServiceIntent(query: string) {
   return /(сним|видеосъём|видеосъем|меропр|событ|корпоратив|репортаж|трансляц|эфир|стрим|онлайн|фильм|документ|ролик|промо|клип|подкаст|интервью|кейс|портфолио)/iu.test(query);
 }
 
-function detectIntent(query: string): ConversationIntent {
+function isProjectRequest(query: string) {
+  return /(?:мне\s+нужно|нам\s+нужно|хочу|надо|планируем|снять|съёмк|съемк|заказ)/iu.test(query) && isServiceIntent(query);
+}
+
+function isProjectDetails(query: string) {
+  return /(?:москва|петербург|спб|сочи|казан|екатеринбург|\d+\s*(?:человек|гост)|через\s+[^,.!?]+(?:недел|дн)|в\s+течени[ие]\s+[^,.!?]+(?:недел|дн)|репортаж|клип|корпоратив)/iu.test(query);
+}
+
+function detectIntent(query: string, hasProjectConversation = false): ConversationIntent {
   const normalized = query.trim();
   if (isGreeting(normalized)) return "greeting";
   if (isThanks(normalized)) return "thanks";
   if (isContactIntent(normalized)) return "contact";
   if (isPricingIntent(normalized)) return "pricing";
+  if (isProjectRequest(normalized) || (hasProjectConversation && isProjectDetails(normalized))) return "project";
   if (isServiceIntent(normalized)) return "service";
   if (/(как\s+дела|что\s+умеешь|что\s+можешь|кто\s+ты|поговорим|на\s+связи|поможешь)/iu.test(normalized)) return "chat";
   return "general";
@@ -65,6 +82,61 @@ function greetingReply(query: string) {
 function conversationQuery(messages: ChatMessage[], latestQuery: string) {
   const userMessages = messages.filter((message) => message.role === "user").slice(-4).map((message) => message.content);
   return userMessages.length > 0 ? userMessages.join("\n") : latestQuery;
+}
+
+function projectDetails(messages: ChatMessage[]): ProjectDetails {
+  const text = messages.filter((message) => message.role === "user").map((message) => message.content).join("\n");
+  const details: ProjectDetails = {};
+  const cityPatterns = [
+    { pattern: /москв/iu, value: "Москва" },
+    { pattern: /санкт[-\s]?петербург|петербург|спб/iu, value: "Санкт-Петербург" },
+    { pattern: /соч/iu, value: "Сочи" },
+    { pattern: /казан/iu, value: "Казань" },
+    { pattern: /екатеринбург/iu, value: "Екатеринбург" },
+  ];
+  details.city = cityPatterns.find(({ pattern }) => pattern.test(text))?.value;
+
+  const dateMatch = text.match(/\b(?:сегодня|завтра|послезавтра|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)\b/iu);
+  details.eventDate = dateMatch?.[0];
+
+  const durationMatch = text.match(/\b\d[\d\s]*(?:час(?:а|ов)?|ч\.|смен(?:а|ы|у)?)\b/iu);
+  details.duration = durationMatch?.[0]?.replace(/\s+/g, " ").trim();
+
+  const guestsMatch = text.match(/\b(\d[\d\s]*)\s*(?:человек|гост(?:ей|я|и)?)\b/iu);
+  details.guests = guestsMatch?.[1]?.replace(/\s+/g, " ").trim();
+
+  const deadlineMatch = text.match(/\b(?:через|в\s+течени[ие])\s+[^,.!?]*(?:недел\w*|дн\w*)/iu);
+  details.deadline = deadlineMatch?.[0]?.replace(/\s+/g, " ").trim();
+
+  const formatParts: string[] = [];
+  if (/корпоратив/iu.test(text)) formatParts.push("корпоратив");
+  if (/репортаж/iu.test(text)) formatParts.push("репортаж");
+  if (/клип/iu.test(text)) formatParts.push("клип");
+  if (/интервью/iu.test(text)) formatParts.push("интервью");
+  if (/трансляц|эфир|стрим/iu.test(text)) formatParts.push("трансляция");
+  details.format = formatParts.length > 0 ? formatParts.join(", ") : undefined;
+  return details;
+}
+
+function projectSummary(details: ProjectDetails) {
+  return [
+    details.city && "город — " + details.city,
+    details.eventDate && "дата — " + details.eventDate,
+    details.format && "формат — " + details.format,
+    details.guests && "около " + details.guests + " гостей",
+    details.duration && "длительность — " + details.duration,
+    details.deadline && "готовый материал — " + details.deadline,
+  ].filter(Boolean).join(", ");
+}
+
+function projectReply(messages: ChatMessage[]) {
+  const details = projectDetails(messages);
+  if (!details.city) return "Понял, нужна съёмка корпоратива. В каком городе будет мероприятие?";
+  const summary = projectSummary(details);
+  if (!details.eventDate) return "Зафиксировал: " + summary + ". Когда проходит сам корпоратив?";
+  if (!details.duration) return "Зафиксировал: " + summary + ". Сколько часов будет длиться мероприятие?";
+  if (!details.guests) return "Зафиксировал: " + summary + ". Примерно сколько гостей ожидается?";
+  return "Основные вводные собраны: " + summary + ". Точную смету по ним подтверждает продюсер после проверки площадки и состава команды.";
 }
 
 function retrieve(query: string, intent: ConversationIntent): GptKnowledgeChunk[] {
@@ -268,10 +340,13 @@ export async function POST(request: Request) {
     ? payload.messages.filter((message): message is ChatMessage => message && (message.role === "user" || message.role === "assistant") && typeof message.content === "string").slice(-MAX_MESSAGES).map((message) => ({ role: message.role, content: clean(message.content, MAX_MESSAGE_LENGTH) })).filter((message) => message.content)
     : [];
   const query = messages.at(-1)?.content || "Расскажите о Production Moscow";
-  const intent = detectIntent(query);
+  const hasProjectConversation = messages.some((message) => message.role === "user" && isProjectRequest(message.content));
+  const intent = detectIntent(query, hasProjectConversation);
   const chunks = retrieve(conversationQuery(messages, query), intent);
   const reply = intent === "greeting" || intent === "thanks"
     ? fallbackReply(query, intent, chunks)
+    : intent === "project"
+      ? projectReply(messages)
     : await askModel(messages, chunks, intent) || fallbackReply(query, intent, chunks);
 
   return Response.json({ reply, sources: sourceList(chunks), suggestLead: intent === "contact" });
