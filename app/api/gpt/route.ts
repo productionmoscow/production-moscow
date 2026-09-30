@@ -115,7 +115,7 @@ function projectDetails(messages: ChatMessage[]): ProjectDetails {
   ];
   details.city = cityPatterns.find(({ pattern }) => pattern.test(text))?.value;
 
-  const dateMatch = text.match(/(?:сегодня|завтра|послезавтра|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)/iu);
+  const dateMatch = text.match(/(?:сегодня|завтра|послезавтра|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|(?<![\d+])(?:0?[1-9]|[12]\d|3[01])[./-](?:0?[1-9]|1[0-2])(?:[./-]\d{2,4})?)/iu);
   details.eventDate = dateMatch?.[0];
 
   const guestsMatch = text.match(/(\d[\d\s]*)\s*(?:человек|гост(?:ей|я|и)?)/iu);
