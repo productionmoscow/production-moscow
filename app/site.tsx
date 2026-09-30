@@ -223,16 +223,14 @@ function Shell({ current, children }: { current: SitePage; children: ReactNode }
   return <div className="site-frame"><SiteHeader current={current} /><main id="main-content" className={pageClassName || undefined}>{children}</main><Footer /></div>;
 }
 
-type GptChatMessage = { role: "user" | "assistant"; content: string; sources?: { title: string; href?: string }[] };
+type GptCase = { title: string; href: string; embed: string; duration?: string };
+type GptChatMessage = { role: "user" | "assistant"; content: string; sources?: { title: string; href?: string }[]; cases?: GptCase[] };
 
 function GptPage() {
   const [messages, setMessages] = useState<GptChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [leadOpen, setLeadOpen] = useState(false);
-  const [leadSent, setLeadSent] = useState(false);
   const [error, setError] = useState("");
-  const [lead, setLead] = useState({ name: "", contact: "", request: "", date: "", consent: false });
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -255,7 +253,7 @@ function GptPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    const payload = await response.json() as { reply?: string; sources?: { title: string; href?: string }[]; suggestLead?: boolean; error?: string; leadReceived?: boolean };
+    const payload = await response.json() as { reply?: string; sources?: { title: string; href?: string }[]; cases?: GptCase[]; suggestLead?: boolean; error?: string; leadReceived?: boolean };
     if (!response.ok) throw new Error(payload.error || "Не удалось получить ответ");
     return payload;
   }
@@ -271,32 +269,9 @@ function GptPage() {
     setIsSending(true);
     try {
       const payload = await requestAssistant({ messages: nextMessages.map(({ role, content }) => ({ role, content })) });
-      setMessages([...nextMessages, { role: "assistant", content: payload.reply || "Давайте уточним задачу — расскажите о мероприятии или формате видео.", sources: payload.sources }]);
-      if (payload.suggestLead) setLeadOpen(true);
+      setMessages([...nextMessages, { role: "assistant", content: payload.reply || "Давайте уточним задачу — расскажите о мероприятии или формате видео.", sources: payload.sources, cases: payload.cases }]);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Не удалось получить ответ");
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  async function submitLead(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSending) return;
-    setError("");
-    setIsSending(true);
-    try {
-      const payload = await requestAssistant({
-        messages: [...messages, { role: "user", content: "Хочу обсудить проект с продюсером." }].map(({ role, content }) => ({ role, content })),
-        lead,
-      });
-      if (payload.leadReceived) {
-        setLeadSent(true);
-        setLeadOpen(false);
-        setMessages([...messages, { role: "assistant", content: payload.reply || "Контакты сохранены. Команда свяжется с вами.", sources: payload.sources }]);
-      }
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Не удалось сохранить заявку");
     } finally {
       setIsSending(false);
     }
@@ -311,7 +286,7 @@ function GptPage() {
         <h1>AI-АССИСТЕНТ<i>*</i></h1>
         <div className="gpt-chat-shell">
           <div className="gpt-messages" ref={messagesRef} aria-live="polite">
-            {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
+            {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.cases?.length ? <div className="gpt-case-row" aria-label="Подходящие кейсы">{message.cases.map((video) => <article className="gpt-case-card" key={`${video.title}-${video.href}`}><div className="gpt-case-frame"><iframe src={video.embed} title={video.title} loading="lazy" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen /></div><a href={video.href} target="_blank" rel="noreferrer">{video.title}{video.duration ? <span>{video.duration}</span> : null}</a></article>)}</div> : null}{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
             {isSending ? <div className="gpt-typing" aria-label="GPT печатает"><span /><span /><span /></div> : null}
           </div>
           <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
@@ -324,14 +299,7 @@ function GptPage() {
       <div className="gpt-workspace">
         <div className="gpt-workspace-head"><div><span className="small-label">01 / Быстрый старт</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
         <div className="gpt-prompts">{promptButtons.map((prompt) => <button type="button" key={prompt} onClick={() => setInput(prompt)}>{prompt}</button>)}</div>
-        {leadOpen && !leadSent ? <form className="gpt-lead-form" onSubmit={submitLead}>
-          <div className="gpt-form-head"><div><span className="small-label">02 / Заявка</span><h3>Передать задачу продюсеру</h3></div><button type="button" className="gpt-form-close" onClick={() => setLeadOpen(false)} aria-label="Закрыть форму">×</button></div>
-          <label>Имя<input required value={lead.name} onChange={(event) => setLead({ ...lead, name: event.target.value })} placeholder="Как к вам обращаться?" /></label>
-          <label>Телефон или другой контакт<input required value={lead.contact} onChange={(event) => setLead({ ...lead, contact: event.target.value })} placeholder="+7 900 000 00 00" /></label>
-          <div className="gpt-form-grid"><label>Дата мероприятия<input type="text" value={lead.date} onChange={(event) => setLead({ ...lead, date: event.target.value })} placeholder="Если уже известна" /></label><label>Формат<input value={lead.request} onChange={(event) => setLead({ ...lead, request: event.target.value })} placeholder="Съёмка, эфир, фильм..." /></label></div>
-          <label className="gpt-consent"><input type="checkbox" required checked={lead.consent} onChange={(event) => setLead({ ...lead, consent: event.target.checked })} /> <span>Согласен на обработку контактных данных. <a href="/conf">Политика конфиденциальности</a></span></label>
-          <button className="gpt-submit" type="submit" disabled={isSending}>Сохранить заявку</button>
-        </form> : <div className="gpt-lead-cta">{leadSent ? <p>Заявка принята. Команда свяжется с вами.</p> : <><p>Уже есть конкретная задача?</p><button type="button" onClick={() => setLeadOpen(true)}>Оставить контакты</button></>}</div>}
+        <div className="gpt-lead-cta"><p>Если удобнее обсудить задачу голосом — Антон, художественный руководитель:</p><a href="tel:+79265399093">+7 926 539-90-93</a></div>
         {error ? <p className="gpt-error" role="alert">{error}</p> : null}
         <p className="gpt-disclaimer">GPT отвечает по материалам Production Moscow. Точные сметы и сроки подтверждает продюсер.</p>
       </div>
