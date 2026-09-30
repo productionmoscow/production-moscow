@@ -103,6 +103,11 @@ jobs:
           launchctl bootout "gui/$(id -u)/$label" >/dev/null 2>&1 || true
           launchctl bootstrap "gui/$(id -u)" "$plist"
 
+      - name: Refresh knowledge immediately
+        run: |
+          set -euo pipefail
+          "$DEPLOY_ROOT/bin/productionmoscow-knowledge-start.sh"
+
       - name: Restart only Production Moscow and verify local service
         run: |
           set -euo pipefail
