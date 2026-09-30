@@ -96,16 +96,16 @@ function projectDetails(messages: ChatMessage[]): ProjectDetails {
   ];
   details.city = cityPatterns.find(({ pattern }) => pattern.test(text))?.value;
 
-  const dateMatch = text.match(/\b(?:сегодня|завтра|послезавтра|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)\b/iu);
+  const dateMatch = text.match(/(?:сегодня|завтра|послезавтра|\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)/iu);
   details.eventDate = dateMatch?.[0];
 
-  const durationMatch = text.match(/\b\d[\d\s]*(?:час(?:а|ов)?|ч\.|смен(?:а|ы|у)?)\b/iu);
+  const durationMatch = text.match(/\d[\d\s]*(?:час(?:а|ов)?|ч\.|смен(?:а|ы|у)?)/iu);
   details.duration = durationMatch?.[0]?.replace(/\s+/g, " ").trim();
 
-  const guestsMatch = text.match(/\b(\d[\d\s]*)\s*(?:человек|гост(?:ей|я|и)?)\b/iu);
+  const guestsMatch = text.match(/(\d[\d\s]*)\s*(?:человек|гост(?:ей|я|и)?)/iu);
   details.guests = guestsMatch?.[1]?.replace(/\s+/g, " ").trim();
 
-  const deadlineMatch = text.match(/\b(?:через|в\s+течени[ие])\s+[^,.!?]*(?:недел\w*|дн\w*)/iu);
+  const deadlineMatch = text.match(/(?:через|в\s+течени[ие])\s+[^,.!?]*(?:недел\p{L}*|дн\p{L}*)/iu);
   details.deadline = deadlineMatch?.[0]?.replace(/\s+/g, " ").trim();
 
   const formatParts: string[] = [];
