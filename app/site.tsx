@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sourcePages, type SourcePageData } from "./source-pages-data";
 
@@ -225,19 +225,22 @@ function Shell({ current, children }: { current: SitePage; children: ReactNode }
 
 type GptChatMessage = { role: "user" | "assistant"; content: string; sources?: { title: string; href?: string }[] };
 
-const gptOpening: GptChatMessage = {
-  role: "assistant",
-  content: "Привет. Я GPT Production Moscow — помогу разобраться с форматом, покажу релевантные кейсы и соберу задачу для продюсера.\n\nСпросите про съёмку, трансляцию, сроки, процесс или оставьте контакты — начнём.",
-};
-
 function GptPage() {
-  const [messages, setMessages] = useState<GptChatMessage[]>([gptOpening]);
+  const [messages, setMessages] = useState<GptChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
   const [error, setError] = useState("");
   const [lead, setLead] = useState({ name: "", contact: "", request: "", date: "", consent: false });
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (!composer) return;
+    composer.style.height = "auto";
+    composer.style.height = `${Math.min(composer.scrollHeight, 220)}px`;
+  }, [input]);
 
   async function requestAssistant(body: Record<string, unknown>) {
     const response = await fetch("/api/gpt", {
@@ -299,13 +302,20 @@ function GptPage() {
       <div className="gpt-assistant-banner">
         <div className="gpt-assistant-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
         <h1>AI-ассистент<i>*</i></h1>
+        <div className="gpt-chat-shell">
+          <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
+            <label className="sr-only" htmlFor="gpt-question">Ваш вопрос</label>
+            <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Спросите что угодно о съемках, трансляциях или нашем продакшене" maxLength={2400} rows={1} />
+            <button type="submit" disabled={isSending || !input.trim()} aria-label="Отправить вопрос">↗</button>
+          </form>
+          <div className="gpt-messages" aria-live="polite">
+            {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
+            {isSending ? <div className="gpt-typing" aria-label="GPT печатает"><span /><span /><span /></div> : null}
+          </div>
+        </div>
       </div>
       <div className="gpt-workspace">
         <div className="gpt-workspace-head"><div><span className="small-label">01 / Диалог</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
-        <div className="gpt-messages" aria-live="polite">
-          {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
-          {isSending ? <div className="gpt-typing" aria-label="GPT печатает"><span /><span /><span /></div> : null}
-        </div>
         <div className="gpt-prompts">{promptButtons.map((prompt) => <button type="button" key={prompt} onClick={() => setInput(prompt)}>{prompt}</button>)}</div>
         {leadOpen && !leadSent ? <form className="gpt-lead-form" onSubmit={submitLead}>
           <div className="gpt-form-head"><div><span className="small-label">02 / Заявка</span><h3>Передать задачу продюсеру</h3></div><button type="button" className="gpt-form-close" onClick={() => setLeadOpen(false)} aria-label="Закрыть форму">×</button></div>
@@ -316,7 +326,6 @@ function GptPage() {
           <button className="gpt-submit" type="submit" disabled={isSending}>Сохранить заявку</button>
         </form> : <div className="gpt-lead-cta">{leadSent ? <p>Заявка принята. Команда свяжется с вами.</p> : <><p>Уже есть конкретная задача?</p><button type="button" onClick={() => setLeadOpen(true)}>Оставить контакты</button></>}</div>}
         {error ? <p className="gpt-error" role="alert">{error}</p> : null}
-        <form className="gpt-input-form" onSubmit={sendMessage}><label className="sr-only" htmlFor="gpt-question">Ваш вопрос</label><input id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Напишите вопрос..." maxLength={2400} /><button type="submit" disabled={isSending || !input.trim()}>Отправить</button></form>
         <p className="gpt-disclaimer">GPT отвечает по материалам Production Moscow. Точные сметы и сроки подтверждает продюсер.</p>
       </div>
     </section>
