@@ -54,7 +54,7 @@ async function loadKnowledgeDirectory(activeDir: string, idPrefix: string, cache
     };
     const activePages = (manifest.pages || []).filter((page) => page.status === "active" && page.file?.endsWith(".md"));
     const chunks = (await Promise.all(activePages.map(async (page) => {
-      const pagePath = join(SITE_KNOWLEDGE_ACTIVE_DIR, "..", page.file || "");
+      const pagePath = join(activeDir, "..", page.file || "");
       const raw = await readFile(pagePath, "utf8");
       const frontMatter = raw.match(/^---\n([\s\S]*?)\n---/u)?.[1] || "";
       const content = raw.replace(/^---\n[\s\S]*?\n---\n*/u, "").trim();
