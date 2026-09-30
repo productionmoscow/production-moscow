@@ -187,7 +187,7 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
   ].join("\n");
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
+  const timer = setTimeout(() => controller.abort(), 25_000);
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
