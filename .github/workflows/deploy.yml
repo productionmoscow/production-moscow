@@ -43,6 +43,12 @@ jobs:
       - name: Build and rendered checks
         run: npm test
 
+      - name: Test Zoom Prokat parser
+        run: |
+          set -euo pipefail
+          npm ci --prefix scripts/zoom-prokat-parser --ignore-scripts --no-audit --no-fund
+          npm test --prefix scripts/zoom-prokat-parser
+
       - name: Deploy release locally
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -55,6 +61,10 @@ jobs:
           install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
           install -d -m 700 "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/config"
           install -d -m 755 "$DEPLOY_ROOT/logs"
+          rm -rf -- "$DEPLOY_ROOT/zoom-prokat-parser"
+          install -d -m 755 "$DEPLOY_ROOT/zoom-prokat-parser"
+          rsync -a --checksum scripts/zoom-prokat-parser/ "$DEPLOY_ROOT/zoom-prokat-parser/"
+          npm ci --prefix "$DEPLOY_ROOT/zoom-prokat-parser" --ignore-scripts --no-audit --no-fund
           if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
             umask 077
             printf 'OPENROUTER_API_KEY=%s\nPRODUCTIONMOSCOW_AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free\nPRODUCTIONMOSCOW_AI_BASE_URL=https://openrouter.ai/api/v1\n' \

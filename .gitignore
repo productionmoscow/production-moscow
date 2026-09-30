@@ -39,6 +39,7 @@ yarn-error.log*
 /outputs/
 /work/
 /data/site-knowledge/
+/scripts/zoom-prokat-parser/node_modules
 
 # Assets from the copied starter that are not used by Production Moscow.
 /anton-wedding-card.png

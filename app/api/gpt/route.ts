@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { gptKnowledge, type GptKnowledgeChunk, type GptKnowledgeMedia } from "../../gpt-knowledge";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-type ConversationIntent = "greeting" | "thanks" | "chat" | "contact" | "pricing" | "project" | "service" | "general";
+type ConversationIntent = "greeting" | "thanks" | "chat" | "contact" | "pricing" | "rental" | "project" | "service" | "general";
 type ProjectDetails = {
   eventType?: string;
   city?: string;
@@ -27,7 +27,11 @@ const MAX_MESSAGES = 12;
 const requests = new Map<string, { count: number; resetAt: number }>();
 const SITE_KNOWLEDGE_ACTIVE_DIR = process.env.PRODUCTIONMOSCOW_KNOWLEDGE_DIR
   || "/Users/clevent/server/sites/production-moscow/data/site-knowledge/active";
-let siteKnowledgeCache: { manifestMtime: number; chunks: GptKnowledgeChunk[] } | null = null;
+const RENTAL_KNOWLEDGE_ACTIVE_DIR = process.env.PRODUCTIONMOSCOW_RENTAL_KNOWLEDGE_DIR
+  || "/Users/clevent/server/sites/production-moscow/data/zoom-prokat-knowledge/active";
+type KnowledgeCache = { manifestMtime: number; chunks: GptKnowledgeChunk[] };
+let siteKnowledgeCache: KnowledgeCache | null = null;
+let rentalKnowledgeCache: KnowledgeCache | null = null;
 
 function frontMatterValue(frontMatter: string, key: string) {
   const value = frontMatter.match(new RegExp(`^${key}:\\s*(.+)$`, "imu"))?.[1]?.trim();
@@ -39,11 +43,11 @@ function frontMatterValue(frontMatter: string, key: string) {
   }
 }
 
-async function loadSiteKnowledge() {
-  const manifestPath = join(SITE_KNOWLEDGE_ACTIVE_DIR, "..", "manifest.json");
+async function loadKnowledgeDirectory(activeDir: string, idPrefix: string, cache: KnowledgeCache | null) {
+  const manifestPath = join(activeDir, "..", "manifest.json");
   try {
     const manifestStat = await stat(manifestPath);
-    if (siteKnowledgeCache?.manifestMtime === manifestStat.mtimeMs) return siteKnowledgeCache.chunks;
+    if (cache?.manifestMtime === manifestStat.mtimeMs) return { cache, chunks: cache.chunks };
 
     const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
       pages?: Array<{ id?: string; title?: string; type?: string; canonical_url?: string; url?: string; file?: string; status?: string }>;
@@ -56,18 +60,30 @@ async function loadSiteKnowledge() {
       const content = raw.replace(/^---\n[\s\S]*?\n---\n*/u, "").trim();
       const href = page.canonical_url || page.url || frontMatterValue(frontMatter, "canonical_url") || frontMatterValue(frontMatter, "url");
       return {
-        id: `site-${page.id || frontMatterValue(frontMatter, "id")}`,
+        id: `${idPrefix}-${page.id || frontMatterValue(frontMatter, "id")}`,
         title: page.title || frontMatterValue(frontMatter, "title") || page.url || "Материал сайта",
         content: content.slice(0, 12_000),
         href,
       } satisfies GptKnowledgeChunk;
     }))).filter((chunk) => chunk.content);
 
-    siteKnowledgeCache = { manifestMtime: manifestStat.mtimeMs, chunks };
-    return chunks;
+    const nextCache = { manifestMtime: manifestStat.mtimeMs, chunks };
+    return { cache: nextCache, chunks };
   } catch {
-    return [];
+    return { cache, chunks: [] };
   }
+}
+
+async function loadSiteKnowledge() {
+  const result = await loadKnowledgeDirectory(SITE_KNOWLEDGE_ACTIVE_DIR, "site", siteKnowledgeCache);
+  siteKnowledgeCache = result.cache;
+  return result.chunks;
+}
+
+async function loadRentalKnowledge() {
+  const result = await loadKnowledgeDirectory(RENTAL_KNOWLEDGE_ACTIVE_DIR, "rental", rentalKnowledgeCache);
+  rentalKnowledgeCache = result.cache;
+  return result.chunks;
 }
 
 function tokenize(value: string) {
@@ -93,6 +109,10 @@ function isContactIntent(query: string) {
 
 function isPricingIntent(query: string) {
   return /(стоим|цен[ау]?\b|смет|бюджет|рассчит|прайс|сколько\s+(?:стоит|будет|нужно)|во\s+сколько)/iu.test(query);
+}
+
+function isRentalIntent(query: string) {
+  return /(аренд|прокат|оборудован|техник|камер\p{L}*|объектив|свет\b|микрофон|рекордер|штатив|стабилизатор|монитор)/iu.test(query);
 }
 
 function isServiceIntent(query: string) {
@@ -253,6 +273,11 @@ function retrieve(query: string, intent: ConversationIntent, knowledge: GptKnowl
   const queryTokens = new Set(tokenize(query));
   const queryText = query.toLocaleLowerCase("ru-RU");
   const intentBoosts = new Map<string, number>();
+  if (intent === "rental") {
+    for (const chunk of knowledge) {
+      if (chunk.id.startsWith("rental-")) intentBoosts.set(chunk.id, 12);
+    }
+  }
   if (/(сним|видеосъём|видеосъем|меропр|событ|корпоратив|репортаж)/u.test(queryText)) {
     intentBoosts.set("event-production", 8);
     intentBoosts.set("promos", 4);
@@ -375,6 +400,9 @@ function fallbackReply(query: string, intent: ConversationIntent, sources: GptKn
   if (intent === "chat") return "Я на связи. Можем спокойно обсудить идею, съёмку, трансляцию или просто прикинуть варианты без обязательств.\n\nСледующий вопрос: что сейчас интереснее — мероприятие, трансляция или ролик?";
   if (intent === "contact") return contactReply([]);
   if (intent === "pricing") return pricingReply([]);
+  if (intent === "rental") {
+    return "Нашёл каталог аренды оборудования Zoom Prokat. Чтобы подобрать комплект и не считать лишнее, нужно понять задачу съёмки.\n\nСледующий вопрос: что снимаем и какая техника уже есть у вас?";
+  }
 
   const best = sources[0];
   return best
@@ -431,6 +459,7 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
     "- В обычном разговоре поддержи диалог и мягко держи связь с продакшеном, только если это уместно.",
     "- На вопрос о съёмке, трансляции или процессе сначала дай полезный ответ, затем задай максимум один уточняющий вопрос с префиксом «Следующий вопрос:».",
     "- На вопрос о цене не отправляй человека сразу на созвон: если в справочном контексте уже есть подтверждённые ставки и достаточно вводных, сразу дай подробный ориентировочный расчёт здесь.",
+    "- Для вопросов об аренде оборудования используй только актуальный контекст Zoom Prokat: называй найденную цену за сутки, не выдавай её за окончательную смету и отдельно уточняй наличие, комплектность и даты.",
     "- Расчёт показывай прозрачно: назови итоговую ориентировочную сумму, объясни, из каких блоков она складывается, и отдельно перечисли, что не учтено. Не выдумывай отсутствующие позиции и суммы.",
     "- После расчёта обязательно задай один вопрос: «Как вам по цене?» — чтобы понять ожидания клиента.",
     "- Если цена попала в ожидания, спокойно предложи продолжить разговор с продюсером или Антоном и перейти к договорённостям.",
@@ -536,9 +565,12 @@ export async function POST(request: Request) {
     ? "contact"
     : isPricingConsent(messages)
       ? "project"
-      : detectIntent(query, hasProjectConversation);
+      : isRentalIntent(query)
+        ? "rental"
+        : detectIntent(query, hasProjectConversation);
   const siteKnowledge = await loadSiteKnowledge();
-  const knowledge = [...gptKnowledge, ...siteKnowledge];
+  const rentalKnowledge = await loadRentalKnowledge();
+  const knowledge = [...gptKnowledge, ...siteKnowledge, ...rentalKnowledge];
   const chunks = retrieve(conversationQuery(messages, query), intent, knowledge);
   let reply: string;
   if (contact) {
@@ -560,6 +592,8 @@ export async function POST(request: Request) {
     reply = contactReply(messages);
   } else if (intent === "pricing") {
     reply = pricingReply(messages);
+  } else if (intent === "rental") {
+    reply = normalizeModelReply(await askModel(messages, chunks, intent) || fallbackReply(query, intent, chunks));
   } else if (intent === "project") {
     reply = projectReply(messages);
   } else {

@@ -17,6 +17,9 @@ labels — `self-hosted`, `mac-mini`, `arm64`.
 - launchd label: `com.productionmoscow.website`;
 - локальный endpoint: `127.0.0.1:3011`;
 - Caddy hostnames: только `productionmoscow.ru` и `www.productionmoscow.ru`.
+- внутренний парсер аренды: `/Users/clevent/server/sites/production-moscow/zoom-prokat-parser`;
+- внутренние данные аренды для RAG: `/Users/clevent/server/sites/production-moscow/data/zoom-prokat-knowledge`;
+- Excel-каталог аренды: `/Users/clevent/server/sites/production-moscow/data/zoom-prokat/zoom-prokat-prices.xlsx`.
 
 Node-приложение запускается как отдельный native-процесс Mac и слушает только
 `127.0.0.1:3011`. Caddy работает в Docker, поэтому отдельный bridge-контейнер
@@ -76,3 +79,12 @@ curl -I https://www.productionmoscow.ru/
 
 Публикация использует только уже настроенные DNS-записи. DNS из этого
 репозитория или workflow не изменяется.
+
+## Знания ассистента и каталог аренды
+
+Еженедельный launchd-процесс `com.productionmoscow.knowledge-crawler` обновляет
+два источника знаний: страницы Production Moscow и каталог `zoom-prokat.ru`.
+Парсер аренды сохраняет цену за сутки, разбивает каталог на небольшие Markdown-
+фрагменты и кладёт их в RAG ассистента. Наличие, комплектность, даты и финальные
+условия аренды не считаются подтверждёнными автоматически и требуют проверки
+продюсером/прокатом.

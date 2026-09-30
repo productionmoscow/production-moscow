@@ -1,0 +1,17 @@
+{
+  "name": "zoom-prokat-parser",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "scrape": "node scripts/zoom-prokat.mjs scrape",
+    "test": "node --test tests/zoom-prokat-scraper.test.mjs"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "exceljs": "^4.4.0"
+  }
+}
