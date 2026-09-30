@@ -54,6 +54,7 @@ jobs:
 
           install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
           install -d -m 700 "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/config"
+          install -d -m 755 "$DEPLOY_ROOT/logs"
           if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
             umask 077
             printf 'OPENROUTER_API_KEY=%s\nPRODUCTIONMOSCOW_AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free\nPRODUCTIONMOSCOW_AI_BASE_URL=https://openrouter.ai/api/v1\n' \
@@ -69,11 +70,28 @@ jobs:
             "$DEPLOY_ROOT/bin/productionmoscow-start.sh"
           install -m 644 deploy/macos/productionmoscow-bridge.mjs \
             "$DEPLOY_ROOT/bin/productionmoscow-bridge.mjs"
+          install -m 755 scripts/crawl-site-knowledge.mjs \
+            "$DEPLOY_ROOT/bin/crawl-site-knowledge.mjs"
+          install -m 755 deploy/macos/productionmoscow-knowledge-start.sh \
+            "$DEPLOY_ROOT/bin/productionmoscow-knowledge-start.sh"
+          install -m 644 deploy/macos/com.productionmoscow.knowledge-crawler.plist \
+            "$DEPLOY_ROOT/config/com.productionmoscow.knowledge-crawler.plist"
 
           "$DEPLOY_ROOT/runtime/node/bin/npm" ci \
             --prefix "$release" --ignore-scripts --no-audit --no-fund
 
           ln -sfn "$release" "$DEPLOY_ROOT/current"
+
+      - name: Install weekly knowledge crawler
+        run: |
+          set -euo pipefail
+          launch_agents="$HOME/Library/LaunchAgents"
+          label="com.productionmoscow.knowledge-crawler"
+          plist="$launch_agents/$label.plist"
+          install -d -m 755 "$launch_agents"
+          install -m 644 "$DEPLOY_ROOT/config/$label.plist" "$plist"
+          launchctl bootout "gui/$(id -u)/$label" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$plist"
 
       - name: Restart only Production Moscow and verify local service
         run: |

@@ -38,6 +38,7 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+/data/site-knowledge/
 
 # Assets from the copied starter that are not used by Production Moscow.
 /anton-wedding-card.png
