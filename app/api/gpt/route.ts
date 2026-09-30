@@ -1,5 +1,5 @@
-import { appendFile, chmod, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { appendFile, chmod, mkdir, readFile, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { gptKnowledge, type GptKnowledgeChunk, type GptKnowledgeMedia } from "../../gpt-knowledge";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -25,6 +25,50 @@ type Lead = {
 const MAX_MESSAGE_LENGTH = 2400;
 const MAX_MESSAGES = 12;
 const requests = new Map<string, { count: number; resetAt: number }>();
+const SITE_KNOWLEDGE_ACTIVE_DIR = process.env.PRODUCTIONMOSCOW_KNOWLEDGE_DIR
+  || "/Users/clevent/server/sites/production-moscow/data/site-knowledge/active";
+let siteKnowledgeCache: { manifestMtime: number; chunks: GptKnowledgeChunk[] } | null = null;
+
+function frontMatterValue(frontMatter: string, key: string) {
+  const value = frontMatter.match(new RegExp(`^${key}:\\s*(.+)$`, "imu"))?.[1]?.trim();
+  if (!value) return "";
+  try {
+    return JSON.parse(value) as string;
+  } catch {
+    return value.replace(/^['"]|['"]$/gu, "");
+  }
+}
+
+async function loadSiteKnowledge() {
+  const manifestPath = join(SITE_KNOWLEDGE_ACTIVE_DIR, "..", "manifest.json");
+  try {
+    const manifestStat = await stat(manifestPath);
+    if (siteKnowledgeCache?.manifestMtime === manifestStat.mtimeMs) return siteKnowledgeCache.chunks;
+
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+      pages?: Array<{ id?: string; title?: string; type?: string; canonical_url?: string; url?: string; file?: string; status?: string }>;
+    };
+    const activePages = (manifest.pages || []).filter((page) => page.status === "active" && page.file?.endsWith(".md"));
+    const chunks = (await Promise.all(activePages.map(async (page) => {
+      const pagePath = join(SITE_KNOWLEDGE_ACTIVE_DIR, "..", page.file || "");
+      const raw = await readFile(pagePath, "utf8");
+      const frontMatter = raw.match(/^---\n([\s\S]*?)\n---/u)?.[1] || "";
+      const content = raw.replace(/^---\n[\s\S]*?\n---\n*/u, "").trim();
+      const href = page.canonical_url || page.url || frontMatterValue(frontMatter, "canonical_url") || frontMatterValue(frontMatter, "url");
+      return {
+        id: `site-${page.id || frontMatterValue(frontMatter, "id")}`,
+        title: page.title || frontMatterValue(frontMatter, "title") || page.url || "Материал сайта",
+        content: content.slice(0, 12_000),
+        href,
+      } satisfies GptKnowledgeChunk;
+    }))).filter((chunk) => chunk.content);
+
+    siteKnowledgeCache = { manifestMtime: manifestStat.mtimeMs, chunks };
+    return chunks;
+  } catch {
+    return [];
+  }
+}
 
 function tokenize(value: string) {
   const stopWords = new Set(["без", "быть", "вам", "вас", "ведь", "вот", "все", "всё", "вы", "где", "для", "если", "или", "как", "кто", "мы", "над", "нас", "наш", "нужен", "нужно", "об", "они", "оно", "от", "по", "под", "при", "про", "сво", "так", "такой", "там", "то", "тоже", "только", "что", "это", "я"]);
@@ -203,7 +247,7 @@ function projectReply(messages: ChatMessage[]) {
   return `${projectComment(details)}\n\nСледующий вопрос: ${question}`;
 }
 
-function retrieve(query: string, intent: ConversationIntent): GptKnowledgeChunk[] {
+function retrieve(query: string, intent: ConversationIntent, knowledge: GptKnowledgeChunk[] = gptKnowledge): GptKnowledgeChunk[] {
   if (intent === "greeting" || intent === "thanks" || intent === "chat" || intent === "contact" || intent === "pricing") return [];
 
   const queryTokens = new Set(tokenize(query));
@@ -226,7 +270,7 @@ function retrieve(query: string, intent: ConversationIntent): GptKnowledgeChunk[
     intentBoosts.set("promos", 3);
     intentBoosts.set("films", 2);
   }
-  const scored = gptKnowledge.map((chunk) => {
+  const scored = knowledge.map((chunk) => {
     const haystack = `${chunk.title} ${chunk.content}`.toLocaleLowerCase("ru-RU");
     const tokens = tokenize(haystack);
     let score = intentBoosts.get(chunk.id) || 0;
@@ -238,7 +282,7 @@ function retrieve(query: string, intent: ConversationIntent): GptKnowledgeChunk[
 
   scored.sort((left, right) => right.score - left.score);
   const matched = scored.filter(({ score }) => score > 0).slice(0, 5).map(({ chunk }) => chunk);
-  return matched.length > 0 ? matched : gptKnowledge.slice(0, 3);
+  return matched.length > 0 ? matched : knowledge.slice(0, 3);
 }
 
 function caseMediaFor(query: string): GptKnowledgeMedia[] {
@@ -493,7 +537,9 @@ export async function POST(request: Request) {
     : isPricingConsent(messages)
       ? "project"
       : detectIntent(query, hasProjectConversation);
-  const chunks = retrieve(conversationQuery(messages, query), intent);
+  const siteKnowledge = await loadSiteKnowledge();
+  const knowledge = [...gptKnowledge, ...siteKnowledge];
+  const chunks = retrieve(conversationQuery(messages, query), intent, knowledge);
   let reply: string;
   if (contact) {
     reply = contactReply(messages, contact);
