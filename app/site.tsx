@@ -213,7 +213,7 @@ function Footer() {
   return <footer className="site-footer">
     <div className="footer-mark" aria-hidden="true">*</div>
     <div><p className="footer-kicker">ProductionMoscow.ru</p><p className="footer-copy">Мы предлагаем прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий.<br />Работаем по всей России, базируемся в Москве.<br />Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p></div>
-    <div className="footer-links"><ContactPhones compact /><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="https://vk.com/prodmskru" target="_blank" rel="noreferrer">ВКонтакте</a><a href="http://productionmoscow.ru" target="_blank" rel="noreferrer">ProductionMoscow.ru</a><a href="/conf">Контакты</a></div>
+    <div className="footer-links"><ContactPhones compact /><a href="https://t.me/productionmoscow" target="_blank" rel="noreferrer">Телеграм</a><a href="https://vk.com/prodmskru" target="_blank" rel="noreferrer">ВКонтакте</a><a href="http://productionmoscow.ru" target="_blank" rel="noreferrer">ProductionMoscow.ru</a><a href="/conf">Контакты</a><a href="/llms.md">Информация для ИИ-агентов</a></div>
     <div className="footer-bottom"><span>ProductionMoscow.ru</span><a href="/contact">Контакты ↗</a></div>
   </footer>;
 }
