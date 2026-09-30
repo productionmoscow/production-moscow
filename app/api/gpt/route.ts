@@ -156,6 +156,12 @@ function retrieve(query: string, intent: ConversationIntent): GptKnowledgeChunk[
   }
   if (/(фильм|документ|юбилей|ролик для меропр)/u.test(queryText)) intentBoosts.set("films", 8);
   if (/(промо|клип|подкаст|интервью|кейс|портфолио)/u.test(queryText)) intentBoosts.set("promos", 8);
+  if (intent === "project") {
+    intentBoosts.set("event-production", 14);
+    intentBoosts.set("process", 10);
+    intentBoosts.set("promos", 3);
+    intentBoosts.set("films", 2);
+  }
   const scored = gptKnowledge.map((chunk) => {
     const haystack = `${chunk.title} ${chunk.content}`.toLocaleLowerCase("ru-RU");
     const tokens = tokenize(haystack);
