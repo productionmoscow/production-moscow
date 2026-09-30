@@ -308,7 +308,7 @@ function GptPage() {
     <section className="gpt-page reveal">
       <div className="gpt-assistant-banner">
         <div className="gpt-assistant-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
-        <h1>AI-ассистент<i>*</i></h1>
+        <h1>AI-АССИСТЕНТ<i>*</i></h1>
         <div className="gpt-chat-shell">
           <div className="gpt-messages" ref={messagesRef} aria-live="polite">
             {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
