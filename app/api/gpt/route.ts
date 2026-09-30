@@ -106,7 +106,7 @@ function projectDetails(messages: ChatMessage[]): ProjectDetails {
   details.guests = guestsMatch?.[1]?.replace(/\s+/g, " ").trim();
 
   const deadlineMatch = text.match(/(?:через|в\s+течени[ие])\s+[^,.!?]*(?:недел\p{L}*|дн\p{L}*)/iu);
-  details.deadline = deadlineMatch?.[0]?.replace(/\s+/g, " ").trim().replace(/^в\s+течении\b/iu, "в течение");
+  details.deadline = deadlineMatch?.[0]?.replace(/\s+/g, " ").trim().replace(/^в\s+течении/iu, "в течение");
 
   const formatParts: string[] = [];
   if (/корпоратив/iu.test(text)) formatParts.push("съёмка корпоратива");
