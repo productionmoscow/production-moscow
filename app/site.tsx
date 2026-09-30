@@ -234,6 +234,7 @@ function GptPage() {
   const [error, setError] = useState("");
   const [lead, setLead] = useState({ name: "", contact: "", request: "", date: "", consent: false });
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const composer = composerRef.current;
@@ -241,6 +242,12 @@ function GptPage() {
     composer.style.height = "auto";
     composer.style.height = `${Math.min(composer.scrollHeight, 220)}px`;
   }, [input]);
+
+  useEffect(() => {
+    const messageList = messagesRef.current;
+    if (!messageList) return;
+    messageList.scrollTop = messageList.scrollHeight;
+  }, [messages, isSending]);
 
   async function requestAssistant(body: Record<string, unknown>) {
     const response = await fetch("/api/gpt", {
@@ -303,19 +310,19 @@ function GptPage() {
         <div className="gpt-assistant-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
         <h1>AI-ассистент<i>*</i></h1>
         <div className="gpt-chat-shell">
-          <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
-            <label className="sr-only" htmlFor="gpt-question">Ваш вопрос</label>
-            <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Спросите что угодно о съемках, трансляциях или нашем продакшене" maxLength={2400} rows={1} />
-            <button type="submit" disabled={isSending || !input.trim()} aria-label="Отправить вопрос">↗</button>
-          </form>
-          <div className="gpt-messages" aria-live="polite">
+          <div className="gpt-messages" ref={messagesRef} aria-live="polite">
             {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "GPT" : "ВЫ"}</span><p>{message.content}</p>{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
             {isSending ? <div className="gpt-typing" aria-label="GPT печатает"><span /><span /><span /></div> : null}
           </div>
+          <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
+            <label className="sr-only" htmlFor="gpt-question">Ваш вопрос</label>
+            <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Спросите что угодно о съемках, трансляциях или нашем продакшене" maxLength={2400} rows={1} />
+            <button type="submit" disabled={isSending || !input.trim()} aria-label="Отправить вопрос">↗</button>
+          </form>
         </div>
       </div>
       <div className="gpt-workspace">
-        <div className="gpt-workspace-head"><div><span className="small-label">01 / Диалог</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
+        <div className="gpt-workspace-head"><div><span className="small-label">01 / Быстрый старт</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
         <div className="gpt-prompts">{promptButtons.map((prompt) => <button type="button" key={prompt} onClick={() => setInput(prompt)}>{prompt}</button>)}</div>
         {leadOpen && !leadSent ? <form className="gpt-lead-form" onSubmit={submitLead}>
           <div className="gpt-form-head"><div><span className="small-label">02 / Заявка</span><h3>Передать задачу продюсеру</h3></div><button type="button" className="gpt-form-close" onClick={() => setLeadOpen(false)} aria-label="Закрыть форму">×</button></div>
