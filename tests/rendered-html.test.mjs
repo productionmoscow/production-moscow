@@ -50,7 +50,7 @@ test("all Production Moscow public routes render their primary content", async (
     "/event": "Съёмка корпоративных мероприятий",
     "/stream": "ПРЯМЫЕ",
     "/contact": "Мы сами можем",
-    "/gpt": "GPT Production Moscow",
+    "/gpt": "AI-ассистент Production Moscow",
     "/conf": "Политика в отношении обработки персональных данных",
   };
 
