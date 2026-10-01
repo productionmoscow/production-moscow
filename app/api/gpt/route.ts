@@ -141,13 +141,18 @@ function detectIntent(query: string, hasProjectConversation = false): Conversati
 
 function greetingReply(query: string) {
   const normalized = query.trim().toLocaleLowerCase("ru-RU");
-  const question = "Что планируется — мероприятие, трансляция, ролик или пока просто изучаете варианты?";
-  if (/^добрый\s+день/iu.test(normalized)) return `Добрый день! Я на связи и помогу спокойно разобраться с задачей.\n\n${question}`;
-  if (/^добр(?:ое|ый)\s+утро/iu.test(normalized)) return `Доброе утро! Рассказывайте, что задумали — помогу сориентироваться.\n\n${question}`;
-  if (/^добрый\s+вечер/iu.test(normalized)) return `Добрый вечер! Я на связи, давайте разберёмся с задачей.\n\n${question}`;
-  if (/^здравствуй/iu.test(normalized)) return `Здравствуйте! Помогу понять, какой формат лучше подойдёт.\n\n${question}`;
-  if (/^(?:yo+|йо+)/iu.test(normalized)) return `Йо! Я на связи — давай разберёмся, что задумали.\n\n${question}`;
-  return `Привет! Рассказывайте, что задумали — мероприятие, эфир, ролик или что-то другое.\n\n${question}`;
+  const greeting = /^добрый\s+день/iu.test(normalized)
+    ? "Добрый день!"
+    : /^добр(?:ое|ый)\s+утро/iu.test(normalized)
+      ? "Доброе утро!"
+      : /^добрый\s+вечер/iu.test(normalized)
+        ? "Добрый вечер!"
+        : /^здравствуй/iu.test(normalized)
+          ? "Здравствуйте!"
+          : /^(?:yo+|йо+)/iu.test(normalized)
+            ? "Йо!"
+            : "Привет!";
+  return `${greeting}\n\nПланируете съёмку? Или нужна трансляция?`;
 }
 
 function conversationQuery(messages: ChatMessage[], latestQuery: string) {
@@ -315,9 +320,13 @@ function caseMediaFor(query: string): GptKnowledgeMedia[] {
   const eventMedia = gptKnowledge.find((chunk) => chunk.id === "event-production")?.media || [];
   if (/корпоратив/iu.test(normalized)) return eventMedia.filter((video) => /корпоратив|фэмили/iu.test(video.title)).slice(0, 3);
   if (/форум|конференц/iu.test(normalized)) return eventMedia.filter((video) => /форум|конференц/iu.test(video.title)).slice(0, 3);
+  if (/клип/iu.test(normalized)) {
+    const promoMedia = gptKnowledge.find((chunk) => chunk.id === "promos")?.media || [];
+    return promoMedia.filter((video) => /клип|модал/iu.test(video.title)).slice(0, 3);
+  }
   const chunkId = /трансляц|эфир|стрим|онлайн/u.test(normalized)
     ? "live-streams"
-    : /клип|промо|постанов|сценар/u.test(normalized)
+    : /промо|постанов|сценар/u.test(normalized)
       ? "promos"
       : /фильм|документ/u.test(normalized)
         ? "films"
@@ -389,7 +398,9 @@ function uncertaintyReply() {
 
 function pricingReply(messages: ChatMessage[]) {
   if (isPricingConsent(messages)) return projectReply(messages);
-  return "Чтобы назвать вам хотя бы ориентировочную стоимость, мне нужно задать несколько коротких вопросов.\n\nГотовы сейчас обсудить задачу здесь или удобнее, чтобы вам позвонили?";
+  const query = messages.at(-1)?.content || "";
+  const clipIntro = /клип/iu.test(query) ? "Клип? Супер, у нас в портфолио есть что вам показать.\n\n" : "";
+  return `${clipIntro}Готов прикинуть для вас ориентировочную смету. Нужно будет уточнить несколько вещей — разберёмся здесь коротко и по делу.\n\nГотовы обсудить задачу здесь или удобнее, чтобы вам позвонили?`;
 }
 
 function fallbackReply(query: string, intent: ConversationIntent, sources: GptKnowledgeChunk[]) {
@@ -599,5 +610,5 @@ export async function POST(request: Request) {
     reply = normalizeModelReply(await askModel(messages, chunks, intent) || fallbackReply(query, intent, chunks));
   }
 
-  return Response.json({ reply, sources: sourceList(chunks), cases: caseMediaFor(conversationQuery(messages, query)), suggestLead: false });
+  return Response.json({ reply, sources: sourceList(chunks), cases: caseMediaFor(query), suggestLead: false });
 }
