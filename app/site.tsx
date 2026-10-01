@@ -226,6 +226,19 @@ function Shell({ current, children }: { current: SitePage; children: ReactNode }
 type GptCase = { title: string; href: string; embed: string; duration?: string };
 type GptChatMessage = { role: "user" | "assistant"; content: string; sources?: { title: string; href?: string }[]; cases?: GptCase[] };
 
+function gptInputPlaceholder(messages: GptChatMessage[]) {
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant")?.content || "";
+  if (messages.length === 0) return "Например: нужен корпоратив в Москве в октябре";
+  if (/номер|контакт|позвон/iu.test(lastAssistant)) return "Например: +7 900 000-00-00";
+  if (/что за мероприятие|где.*когда|дат[ау]|место/iu.test(lastAssistant)) return "Например: форум в Москве, 12 октября";
+  if (/гост|масштаб|человек/iu.test(lastAssistant)) return "Например: около 200 гостей";
+  if (/для чего|задач[ае].*ролик|цель/iu.test(lastAssistant)) return "Например: хотим продать билеты на следующий год";
+  if (/что.*отдать|результат|формат.*ролик|продукт/iu.test(lastAssistant)) return "Например: фильм, интервью и пять коротких роликов";
+  if (/срок|дедлайн|готов.*материал/iu.test(lastAssistant)) return "Например: готовый ролик нужен через две недели";
+  if (/стоим|смет|готов.*обсуд|удобнее.*позвон/iu.test(lastAssistant)) return "Опишите задачу — прикинем ориентировочную смету";
+  return "Ответьте на вопрос выше — можно коротко";
+}
+
 function GptPage() {
   const [messages, setMessages] = useState<GptChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -291,7 +304,7 @@ function GptPage() {
           </div>
           <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
             <label className="sr-only" htmlFor="gpt-question">Ваш вопрос</label>
-            <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Спросите что угодно о съемках, трансляциях или нашем продакшене" maxLength={2400} rows={1} />
+            <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={gptInputPlaceholder(messages)} maxLength={2400} rows={1} />
             <button type="submit" disabled={isSending || !input.trim()} aria-label="Отправить вопрос">↗</button>
           </form>
         </div>
