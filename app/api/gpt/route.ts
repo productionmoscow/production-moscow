@@ -337,6 +337,21 @@ function caseMediaFor(query: string): GptKnowledgeMedia[] {
   return gptKnowledge.find((chunk) => chunk.id === chunkId)?.media?.slice(0, 3) || [];
 }
 
+function caseIntroFor(query: string) {
+  const normalized = query.toLocaleLowerCase("ru-RU");
+  if (/корпоратив/iu.test(normalized)) return "О, корпоратив — у нас есть что показать. Посмотрите, как мы снимаем корпоративы.";
+  if (/форум|конференц/iu.test(normalized)) return "О, форум — у нас есть хорошие примеры. Посмотрите, как мы снимаем репортажи с форумов и конференций.";
+  if (/клип/iu.test(normalized)) return "Клип? Супер, у нас в портфолио есть что показать. Посмотрите примеры постановочных роликов.";
+  if (/трансляц|эфир|стрим|онлайн/iu.test(normalized)) return "Если нужна трансляция — тоже есть что показать. Посмотрите, как мы работаем с прямым эфиром.";
+  if (/подкаст|интервью/iu.test(normalized)) return "Для такого формата у нас тоже есть подходящие примеры. Посмотрите, как мы снимаем разговорные и студийные проекты.";
+  return "У нас есть что показать по этой задаче. Посмотрите подходящие примеры работ.";
+}
+
+function addCaseIntro(reply: string, query: string, cases: GptKnowledgeMedia[]) {
+  if (!cases.length || /посмотр(?:ите|и)|покаж(?:ите|ем)|кейсы|портфолио|примеры работ/iu.test(reply)) return reply;
+  return `${caseIntroFor(query)}\n\n${reply}`;
+}
+
 function clientAddress(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
@@ -399,9 +414,7 @@ function uncertaintyReply() {
 
 function pricingReply(messages: ChatMessage[]) {
   if (isPricingConsent(messages)) return projectReply(messages);
-  const query = messages.at(-1)?.content || "";
-  const clipIntro = /клип/iu.test(query) ? "Клип? Супер, у нас в портфолио есть что вам показать.\n\n" : "";
-  return `${clipIntro}Готов прикинуть для вас ориентировочную смету. Нужно будет уточнить несколько вещей — разберёмся здесь коротко и по делу.\n\nГотовы обсудить задачу здесь или удобнее, чтобы вам позвонили?`;
+  return "Готов прикинуть для вас ориентировочную смету. Нужно будет уточнить несколько вещей — разберёмся здесь коротко и по делу.\n\nГотовы обсудить задачу здесь или удобнее, чтобы вам позвонили?";
 }
 
 function fallbackReply(query: string, intent: ConversationIntent, sources: GptKnowledgeChunk[]) {
@@ -622,5 +635,6 @@ export async function POST(request: Request) {
     reply = normalizeModelReply(await askModel(messages, chunks, intent) || "") || fallbackReply(query, intent, chunks);
   }
 
-  return Response.json({ reply, sources: sourceList(chunks), cases: caseMediaFor(query), suggestLead: false });
+  const cases = caseMediaFor(query);
+  return Response.json({ reply: addCaseIntro(reply, query, cases), sources: sourceList(chunks), cases, suggestLead: false });
 }
