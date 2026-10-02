@@ -14,10 +14,11 @@ export type GptKnowledgeMedia = {
   tags?: string[];
   showWhen?: string[];
   note?: string;
+  ragContext?: string;
   priority?: "high" | "normal";
 };
 
-type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "priority">;
+type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "ragContext" | "priority">;
 
 const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`, meta: GptKnowledgeMediaMeta = {}): GptKnowledgeMedia => ({
   title,
@@ -50,6 +51,7 @@ export const gptKnowledge: GptKnowledgeChunk[] = [
         tags: ["форум", "конференция", "бизнес-мероприятие", "репортажный ролик", "рекламный ролик", "продажа билетов", "трансляция", "полная запись", "короткие нарезки"],
         showWhen: ["клиент говорит о форуме или конференции", "нужен ролик, который помогает продавать билеты на следующий год", "обсуждается бизнес-мероприятие с рекламной задачей", "нужны трансляция и запись всего мероприятия"],
         note: "Сильный пример: репортажный ролик использовался как реклама форума, помогал собирать аудиторию и продавать билеты на следующий год. Из полного материала делали короткие ролики; сам форум также полностью записывали и транслировали.",
+        ragContext: "Показывать не только как красивый отчёт с форума, а как пример решения бизнес-задачи: ролик помогает привлекать аудиторию и продавать билеты на следующий год. Объяснять клиенту, что такая съёмка может быть инвестицией в следующее мероприятие, а не просто расходом на видео.",
       }),
       vkMedia("456239024", "Открывающий ролик конференции EdCrunch", "1:50"),
       vkMedia("456239037", "Корпоративные зимние соревнования Сбербанка", "4:16"),
