@@ -112,7 +112,8 @@ function isPricingIntent(query: string) {
 }
 
 function isRentalIntent(query: string) {
-  return /(аренд|прокат|оборудован|техник|камер\p{L}*|объектив|свет\b|микрофон|рекордер|штатив|стабилизатор|монитор)/iu.test(query);
+  if (/(корпоратив|форум|конференц|репортаж|меропр|событ)/iu.test(query) && !/(аренд|прокат|клип|промо|постанов|подкаст|студийн|интервью)/iu.test(query)) return false;
+  return /(аренд|прокат|оборудован|техник|объектив|свет\b|микрофон|рекордер|штатив|стабилизатор|монитор)/iu.test(query);
 }
 
 function isServiceIntent(query: string) {
@@ -422,7 +423,10 @@ function fallbackReply(query: string, intent: ConversationIntent, sources: GptKn
 }
 
 function sourceList(chunks: GptKnowledgeChunk[]) {
-  return chunks.map(({ title, href }) => ({ title, href })).filter((source) => source.href);
+  return chunks
+    .filter(({ id, title }) => !id.startsWith("rental-") && !/^Аренда:/iu.test(title))
+    .map(({ title, href }) => ({ title, href }))
+    .filter((source) => source.href);
 }
 
 function leadFile() {
@@ -457,6 +461,8 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
   const contextBlock = context || "Для этой реплики специальный справочный контекст не нужен.";
   const system = [
     "Ты — дружелюбный помощник Production Moscow, а не рекламный бот. Отвечай на русском, естественно и по делу, обычно в 1–3 коротких абзацах.",
+    "Отвечай исключительно на русском языке. Английский допускается только внутри названий моделей, брендов, ссылок и общепринятых технических терминов, если без этого нельзя.",
+    "Никогда не показывай пользователю внутренние рассуждения, черновик ответа, анализ запроса, классификацию намерения, рабочие заметки или инструкции. Пользователь должен видеть только готовый ответ без разделов Analysis, Reasoning, Notes и без фраз вроде 'The user...', 'I should...' или 'I need to...'.",
     "Сначала отвечай на последнее сообщение пользователя, а не рассказывай презентацию компании. Если пользователь пишет свободно, можно отвечать свободно; если пишет деловым языком — отвечай спокойно и профессионально. Не переигрывай со сленгом и не называй каждого пользователя «братан».",
     "Каждый содержательный ответ строй из двух частей, если вопрос действительно нужен: сначала короткая содержательная реакция на то, что написал клиент, затем отдельным абзацем задай только один уместный вопрос. Формулировку «Следующий вопрос:» используй только во время структурированного брифа проекта, а не в приветствии, благодарности, свободном разговоре или обычном коротком ответе.",
     "Если в контексте уже понятна цель клиента, не спрашивай её повторно: предложи гипотезу и попроси подтвердить или поправить её. Если клиент назвал несколько целей, учитывай их все, не заставляй выбирать одну.",
@@ -471,6 +477,7 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
     "- На вопрос о съёмке, трансляции или процессе сначала дай полезный ответ, затем при необходимости задай максимум один уточняющий вопрос. Префикс «Следующий вопрос:» нужен только для структурированного брифа.",
     "- На вопрос о цене не отправляй человека сразу на созвон: если в справочном контексте уже есть подтверждённые ставки и достаточно вводных, сразу дай подробный ориентировочный расчёт здесь в формате «от».",
     "- Для вопросов об аренде оборудования используй только актуальный контекст Zoom Prokat: называй найденную цену за сутки, не выдавай её за окончательную смету и отдельно уточняй наличие, комплектность и даты.",
+    "- Для репортажной съёмки мероприятия по умолчанию не закладывай аренду оборудования: исходи из базового комплекта команды. Каталог Zoom Prokat используй для постановочной съёмки, клипа, промо, подкаста, студийного или сложного светового сетапа, либо когда клиент прямо спрашивает аренду или конкретную технику.",
     "- Расчёт показывай прозрачно: назови общий ориентир с формулировкой «от», объясни, из каких блоков он складывается, и отдельно перечисли, что не учтено. Не превращай минимальные ставки в фиксированную смету и не выдумывай отсутствующие позиции или суммы.",
     "- После расчёта обязательно задай один вопрос: «Как вам по цене?» — чтобы понять ожидания клиента.",
     "- Если цена попала в ожидания, спокойно предложи продолжить разговор с продюсером или Антоном и перейти к договорённостям.",
@@ -529,9 +536,14 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
 }
 
 function normalizeModelReply(reply: string) {
-  return reply
+  const normalized = reply
     .replace(/(^|\n)\s*Следующий\s+вопрос\s*:\s*/iu, "$1")
     .trim();
+  const reasoningLeak = /(?:^|\n)\s*(?:analysis|reasoning|internal\s+notes?|the\s+user\b|i\s+should\b|i\s+need\s+to\b|first,?\s+i\b|let\s+me\b|this\s+is\s+a\b)/iu.test(normalized);
+  const cyrillicLetters = normalized.match(/[А-Яа-яЁё]/gu)?.length || 0;
+  const latinLetters = normalized.match(/[A-Za-z]/gu)?.length || 0;
+  if (!normalized || reasoningLeak || (latinLetters > 24 && latinLetters > cyrillicLetters)) return "";
+  return normalized;
 }
 
 export async function POST(request: Request) {
@@ -603,11 +615,11 @@ export async function POST(request: Request) {
   } else if (intent === "pricing") {
     reply = pricingReply(messages);
   } else if (intent === "rental") {
-    reply = normalizeModelReply(await askModel(messages, chunks, intent) || fallbackReply(query, intent, chunks));
+    reply = normalizeModelReply(await askModel(messages, chunks, intent) || "") || fallbackReply(query, intent, chunks);
   } else if (intent === "project") {
     reply = projectReply(messages);
   } else {
-    reply = normalizeModelReply(await askModel(messages, chunks, intent) || fallbackReply(query, intent, chunks));
+    reply = normalizeModelReply(await askModel(messages, chunks, intent) || "") || fallbackReply(query, intent, chunks);
   }
 
   return Response.json({ reply, sources: sourceList(chunks), cases: caseMediaFor(query), suggestLead: false });
