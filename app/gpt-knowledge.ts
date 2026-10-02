@@ -15,10 +15,11 @@ export type GptKnowledgeMedia = {
   showWhen?: string[];
   note?: string;
   ragContext?: string;
+  related?: Array<{ title: string; href: string; embed?: string }>;
   priority?: "high" | "normal";
 };
 
-type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "ragContext" | "priority">;
+type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "ragContext" | "related" | "priority">;
 
 const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`, meta: GptKnowledgeMediaMeta = {}): GptKnowledgeMedia => ({
   title,
@@ -86,7 +87,13 @@ export const gptKnowledge: GptKnowledgeChunk[] = [
     content: "Организуем прямые трансляции мероприятий любого масштаба. В работе могут быть многокамерная съёмка, режиссура эфира, графика, титры, запись трансляции и резервные каналы связи. Транслируем на ВК, YouTube, Рутьюб, Telegram, корпоративные сайты и другие платформы.",
     href: "/stream",
     media: [
-      vkMedia("456239036", "FSA — спортивная трансляция", "5:02:20", "https://vk.com/prodmskru?z=video-59299172_456239036%2Fvideos-59299172%2Fpl_-59299172_-2"),
+      vkMedia("456239036", "FSA — спортивная трансляция", "5:02:20", "https://vk.com/prodmskru?z=video-59299172_456239036%2Fvideos-59299172%2Fpl_-59299172_-2", {
+        tags: ["спортивная трансляция", "турнир по грэпплингу", "грэпплинг", "четыре камеры", "повторы", "сложная режиссура эфира", "полная трансляция", "бэкстейдж"],
+        showWhen: ["клиенту нужна трансляция спортивного турнира", "важны повторы и работа с несколькими камерами", "нужно объяснить сложность спортивного эфира", "клиент спрашивает про полноценную запись турнира"],
+        note: "Целиком транслировали турнир по грэпплингу: четыре камеры, повторы и сложная режиссура спортивного эфира. На странице трансляций есть отдельный бэкстейдж, где Мишаня рассказывает о технических и организационных сложностях проекта.",
+        ragContext: "Показывать как пример сложной спортивной трансляции, а не просто съёмки соревнований: четыре камеры, повторы, режиссура эфира и полная запись турнира. Вместе с этим видео предлагать посмотреть бэкстейдж на странице трансляций, где Мишаня объясняет, как устроен такой проект и почему он требует серьёзной команды и техники.",
+        related: [{ title: "Бэкстейдж трансляции турнира по грэпплингу FSA", href: "/stream#stream-case-video", embed: "https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue" }],
+      }),
       vkMedia("456239034", "Презентация книги", "3:28:12"),
       vkMedia("456239040", "Новогодний онлайн-корпоратив", "2:14:20"),
     ],
