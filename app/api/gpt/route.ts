@@ -393,8 +393,14 @@ function isPositiveAnswer(query: string) {
 }
 
 function isPricingConsent(messages: ChatMessage[]) {
-  const query = messages.at(-1)?.content || "";
-  return isPositiveAnswer(query) && /готовы|обсудить здесь|вам позвони/iu.test(lastAssistantMessage(messages));
+  const query = messages.at(-1)?.content?.trim() || "";
+  const previous = lastAssistantMessage(messages);
+  if (!/готовы|обсудить здесь|вам позвони/iu.test(previous)) return false;
+
+  const affirmative = isPositiveAnswer(query)
+    || /^(?:да|ага|давай(?:те)?|хочу|готов(?:ы)?|можно|согласен(?:на)?)[!,.?…\s]+(?:.{0,80}(?:прикин(?:ем|уть)|посчит(?:аем|ать)|смет|стоим|цен|обсуд))/iu.test(query)
+    || /^(?:да|ага|давай(?:те)?|хочу|готов(?:ы)?|можно|согласен(?:на)?)[!,.?…\s]+(?:здесь|тут)/iu.test(query);
+  return affirmative;
 }
 
 function contactReply(messages: ChatMessage[], contact?: ContactValue) {
