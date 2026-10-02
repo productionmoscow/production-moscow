@@ -290,8 +290,6 @@ function GptPage() {
     }
   }
 
-  const promptButtons = ["Что вы снимаете?", "Как проходит трансляция?", "Покажи похожие кейсы"];
-
   return <Shell current="gpt">
     <section className="gpt-page reveal">
       <div className="gpt-assistant-banner">
@@ -307,14 +305,8 @@ function GptPage() {
             <textarea ref={composerRef} id="gpt-question" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={gptInputPlaceholder(messages)} maxLength={2400} rows={1} />
             <button type="submit" disabled={isSending || !input.trim()} aria-label="Отправить вопрос">↗</button>
           </form>
+          {error ? <p className="gpt-error" role="alert">{error}</p> : null}
         </div>
-      </div>
-      <div className="gpt-workspace">
-        <div className="gpt-workspace-head"><div><span className="small-label">01 / Быстрый старт</span><h2>Что снимаем?</h2></div><span className="gpt-dot" aria-label="GPT доступен" /></div>
-        <div className="gpt-prompts">{promptButtons.map((prompt) => <button type="button" key={prompt} onClick={() => setInput(prompt)}>{prompt}</button>)}</div>
-        <div className="gpt-lead-cta"><p>Если удобнее обсудить задачу голосом — Антон, художественный руководитель:</p><a href="tel:+79265399093">+7 926 539-90-93</a></div>
-        {error ? <p className="gpt-error" role="alert">{error}</p> : null}
-        <p className="gpt-disclaimer">GPT отвечает по материалам Production Moscow. Точные сметы и сроки подтверждает продюсер.</p>
       </div>
     </section>
   </Shell>;

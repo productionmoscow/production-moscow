@@ -1224,7 +1224,7 @@ h1, h2, h3, p, li, figcaption, summary, .eyebrow, .small-label, .hero-credential
 .gpt-assistant-banner .small-label { color: var(--dark-muted); }
 .gpt-status { color: var(--accent); font: 600 11px var(--font-plex-mono), monospace; letter-spacing: .08em; }
 .gpt-assistant-banner h1 { margin: clamp(30px, 4vw, 56px) 0 0; font-size: clamp(52px, 8vw, 114px); line-height: .84; letter-spacing: -.07em; }
-.gpt-assistant-banner h1 i { color: var(--accent); font-style: normal; }
+.gpt-assistant-banner h1 i { display: inline-block; color: var(--accent); font-size: 1.22em; font-style: normal; line-height: .7; transform: translateY(-.08em); }
 .gpt-chat-shell { max-width: 680px; margin-top: clamp(26px, 3.5vw, 46px); }
 .gpt-workspace { display: flex; width: 100%; max-width: 1180px; min-width: 0; min-height: 0; margin: 0 auto; flex: 0 1 auto; flex-direction: column; padding: clamp(24px, 4vw, 58px) clamp(20px, 4vw, 64px) 24px; box-sizing: border-box; }
 .gpt-workspace-head { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
