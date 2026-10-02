@@ -11,13 +11,20 @@ export type GptKnowledgeMedia = {
   href: string;
   embed: string;
   duration?: string;
+  tags?: string[];
+  showWhen?: string[];
+  note?: string;
+  priority?: "high" | "normal";
 };
 
-const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`): GptKnowledgeMedia => ({
+type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "priority">;
+
+const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`, meta: GptKnowledgeMediaMeta = {}): GptKnowledgeMedia => ({
   title,
   duration,
   href,
   embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
+  ...meta,
 });
 
 /**
@@ -38,7 +45,12 @@ export const gptKnowledge: GptKnowledgeChunk[] = [
     content: "Снимаем корпоративы, форумы, конференции, презентации, гала-ужины, спортивные соревнования, концерты и шоу. Можем закрыть полный цикл: техническое задание, фото и видео на площадке, монтаж, цветокоррекция и материалы для публикации. Работаем в Москве и выезжаем по России.",
     href: "/event",
     media: [
-      vkMedia("456239041", "НРФ // Национальный рекламный форум", "7:40"),
+      vkMedia("456239041", "НРФ // Национальный рекламный форум", "7:40", undefined, {
+        priority: "high",
+        tags: ["форум", "конференция", "бизнес-мероприятие", "репортажный ролик", "рекламный ролик", "продажа билетов", "трансляция", "полная запись", "короткие нарезки"],
+        showWhen: ["клиент говорит о форуме или конференции", "нужен ролик, который помогает продавать билеты на следующий год", "обсуждается бизнес-мероприятие с рекламной задачей", "нужны трансляция и запись всего мероприятия"],
+        note: "Сильный пример: репортажный ролик использовался как реклама форума, помогал собирать аудиторию и продавать билеты на следующий год. Из полного материала делали короткие ролики; сам форум также полностью записывали и транслировали.",
+      }),
       vkMedia("456239024", "Открывающий ролик конференции EdCrunch", "1:50"),
       vkMedia("456239037", "Корпоративные зимние соревнования Сбербанка", "4:16"),
       vkMedia("456239030", "Корпоратив «Рокетбанка»", "3:37"),
