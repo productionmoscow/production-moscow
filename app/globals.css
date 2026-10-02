@@ -1073,8 +1073,6 @@ h1, h2, h3 { font-weight: 900; }
 .production-thanks-grid figcaption { margin-top: 10px; color: var(--muted); font: 10px var(--font-plex-mono), monospace; text-transform: uppercase; }
 .production-portfolio-section .section-lead { max-width: 780px; margin-left: clamp(0px, 8vw, 120px); }
 .production-portfolio-section .video-gallery { margin-left: clamp(0px, 8vw, 120px); }
-.production-home-playlist { padding-bottom: clamp(48px, 7vw, 92px); }
-.production-home-playlist .video-gallery { margin-top: 38px; }
 .production-event-playlist .video-gallery { margin-left: clamp(0px, 6vw, 92px); }
 .event-hero-subtitle { margin: 28px 0 0; color: var(--muted); font: 500 13px var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .production-event-copy { padding-inline: clamp(20px, 7vw, 110px); }
