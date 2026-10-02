@@ -94,6 +94,16 @@ const streamFeatureVideo: VideoWork = {
   embed: kinescopeEmbed("jCnWpQG5onNrYKL3A7fDue"),
 };
 
+const homePlaylistVideos = [
+  showreel,
+  ...caseFilms,
+  ...casePromos,
+  ...caseProjects,
+  ...eventWorks,
+  streamFeatureVideo,
+  ...streamExamples,
+];
+
 const services = [
   ["Прямые трансляции", "Организуем прямые трансляции мероприятий любого масштаба в Москве. Обеспечим многокамерную съемку, профессиональную графику и стабильное соединение для трансляции на любые онлайн-платформы", "/stream"],
   ["Фильмы для мероприятий", "Создаем документальные фильмы, которые показываем на крупнейших мероприятиях - как достижения компании или семейные фильмы на юбилей", "/case#films"],
@@ -239,7 +249,7 @@ function gptInputPlaceholder(messages: GptChatMessage[]) {
   return "Ответьте на вопрос выше — можно коротко";
 }
 
-function GptPage() {
+function GptAssistantBlock() {
   const [messages, setMessages] = useState<GptChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -290,8 +300,7 @@ function GptPage() {
     }
   }
 
-  return <Shell current="gpt">
-    <section className="gpt-page reveal">
+  return <section className="gpt-page reveal">
       <div className="gpt-assistant-banner">
         <div className="gpt-assistant-top"><span className="small-label">GPT / PRODUCTION MOSCOW</span><span className="gpt-status">БЕТА</span></div>
         <h1>AI-АССИСТЕНТ<i>*</i></h1>
@@ -308,8 +317,11 @@ function GptPage() {
           {error ? <p className="gpt-error" role="alert">{error}</p> : null}
         </div>
       </div>
-    </section>
-  </Shell>;
+    </section>;
+}
+
+function GptPage() {
+  return <Shell current="gpt"><GptAssistantBlock /></Shell>;
 }
 
 function HomePage() {
@@ -319,10 +331,12 @@ function HomePage() {
       <div className="hero-video"><VideoEmbed video={showreel} showMeta={false} /><div className="hero-video-foot"><h2>ПОСМОТРИТЕ НАШ ШОУРИЛ<span className="accent">*</span></h2><p>За минуту вы поймете наш стиль и уровень</p></div></div>
     </section>
 
-    <section className="lined-section production-services reveal"><SectionHead number="02" title="Что мы можем?" emphasizeNumber>Список сервисов, которые мы предоставляем</SectionHead><div className="service-answers production-services-grid">{services.map(([title, description, href]) => <article key={title}><Link className="service-card" href={href}><h3>{title}</h3><p>{description}</p></Link></article>)}</div></section>
-    <section className="lined-section production-why reveal"><SectionHead number="03" title="Почему мы?">Есть несколько отличительных особенностей,<br />за которые нас выбирают</SectionHead><div className="production-principles-grid">{principles.map(([title, description], index) => <article key={title}><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{description}</p></article>)}</div></section>
-    <section className="lined-section production-thanks reveal"><SectionHead number="04" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="production-thanks-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
-    <section className="contact-banner reveal"><div><p className="small-label">05 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
+    <section className="lined-section production-home-playlist reveal"><SectionHead number="02" title="Наш плейлист">Все видео Production Moscow в одном месте</SectionHead><VideoGallery videos={homePlaylistVideos} /></section>
+    <GptAssistantBlock />
+    <section className="lined-section production-services reveal"><SectionHead number="04" title="Что мы можем?" emphasizeNumber>Список сервисов, которые мы предоставляем</SectionHead><div className="service-answers production-services-grid">{services.map(([title, description, href]) => <article key={title}><Link className="service-card" href={href}><h3>{title}</h3><p>{description}</p></Link></article>)}</div></section>
+    <section className="lined-section production-why reveal"><SectionHead number="05" title="Почему мы?">Есть несколько отличительных особенностей,<br />за которые нас выбирают</SectionHead><div className="production-principles-grid">{principles.map(([title, description], index) => <article key={title}><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{description}</p></article>)}</div></section>
+    <section className="lined-section production-thanks reveal"><SectionHead number="06" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="production-thanks-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
+    <section className="contact-banner reveal"><div><p className="small-label">07 / Контакты</p><h2>Мы предлагаем<br /><span>прямые трансляции, промо-видео, корпоративные фильмы и видеосъёмку мероприятий</span></h2></div><div className="contact-banner-action"><p>Работаем по всей России, базируемся в Москве.</p><p>Картинка как в кино, команда, которая знает, что делает, и продакшн, которому можно доверять.</p><ContactPhones /><ArrowLink href="/contact">Контакты</ArrowLink></div></section>
   </Shell>;
 }
 
