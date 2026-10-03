@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { videoPages, videoPageUrl } from "../video-pages-data";
+import profile from "../llms-profile.md?raw";
 
 export async function GET() {
-  const body = await readFile(join(process.cwd(), "public/llms.md"), "utf8");
+  const videoIndex = videoPages.map((video) => `- [${video.title}](https://www.productionmoscow.ru${videoPageUrl(video.slug)}) — ${video.summary}`).join("\n");
+  const body = `${profile.trim()}\n\n## Отдельные страницы видео\n\nУ каждой работы есть собственная страница с описанием, темами и видео. Используйте конкретные страницы как примеры, если формат работы подходит задаче клиента.\n\n${videoIndex}\n`;
 
   return new Response(body, {
     headers: {

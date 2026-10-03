@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import SelfHostedHlsVideo from "./components/self-hosted-hls-video";
 import { sourcePages, type SourcePageData } from "./source-pages-data";
+import { videoPageBySlug, videoPageUrl, videoPages, videosByGroup, type VideoPageData } from "./video-pages-data";
 
-export type SitePage = "home" | "case" | "event" | "stream" | "food" | "politika" | "studio" | "kiselev" | "golf" | "pokavsedoma" | "vsacademy" | "gnivts" | "contact" | "conf" | "gpt";
+export type SitePage = "home" | "case" | "event" | "stream" | "video" | "food" | "politika" | "studio" | "kiselev" | "golf" | "pokavsedoma" | "vsacademy" | "gnivts" | "contact" | "conf" | "gpt";
 
 const navItems = [
   { label: "Портфолио", href: "/case" },
@@ -16,93 +18,23 @@ const navItems = [
   { label: "GPT", href: "/gpt" },
 ] as const;
 
-type VideoWork = { title: string; duration?: string; href: string; embed?: string };
+type VideoWork = { slug: string; title: string; duration?: string; href: string; embed?: string };
 
-const kinescopeEmbed = (id: string) => `https://kinescope.io/embed/${id}?autoplay=true&muted=true&controls=false&loop=true&autopause=false`;
-
-const vkVideo = (id: string, title: string, duration?: string): VideoWork => ({
-  title,
-  duration,
-  href: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
-  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
+const toVideoWork = (video: VideoPageData): VideoWork => ({
+  slug: video.slug,
+  title: video.title,
+  duration: video.duration,
+  href: videoPageUrl(video.slug),
+  embed: video.providerId === "unconfirmed" ? undefined : `/media/video/${video.slug}/master.m3u8`,
 });
 
-const sourceVkVideo = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`): VideoWork => ({
-  title,
-  duration,
-  href,
-  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
-});
-
-const showreel: VideoWork = {
-  title: "ПОСМОТРИТЕ НАШ ШОУРИЛ",
-  href: "https://kinescope.io/embed/jtfz36DqKYQ1TMvZeoSQRY",
-  embed: kinescopeEmbed("jtfz36DqKYQ1TMvZeoSQRY"),
-};
-
-const caseFilms = [
-  vkVideo("456239022", "Фильм про блогера Ольгу Нечаеву", "12:42"),
-  vkVideo("456239024", "Открывающий ролик конференции EdCrunch", "1:50"),
-  vkVideo("456239058", "Фильм для корпоратива ItAgency", "7:02"),
-  vkVideo("456239027", "Фильм для инвесторов HiTest Russia", "4:06"),
-];
-
-const casePromos = [
-  vkVideo("456239049", "Ведущий - упырь", "4:35"),
-  vkVideo("456239023", "Промо группы «МОДАЛ»", "48:07"),
-  vkVideo("456239062", "Сократ и Веда. Заявка на WA-24", "44:46"),
-  vkVideo("456239057", "МАРК-3000", "6:05"),
-  vkVideo("456239060", "Фестиваль рекламных роликов Марка Мирзояна", "7:46"),
-  vkVideo("456239045", "Коробков и Зубков", "4:53"),
-  vkVideo("456239061", "Ивент-бар", "2:13"),
-];
-
-const caseProjects = [
-  vkVideo("456239059", "Подкаст Адиса Маммо «Темная Сторона». Гость - Виктор Комаров", "45:35"),
-  vkVideo("456239055", "Проект «Антракт» Никиты Жукова // в гостях Анастасия Соколова", "44:46"),
-  vkVideo("456239056", "Проект «Бобров+» Кирилла Боброва // выпуск про ТОП100", "56:05"),
-  vkVideo("456239048", "Подкаст с Дмитрием Дибровым", "48:07"),
-  vkVideo("456239025", "Операторский скилл - часовой подкаст «Точка сборки» одной камерой одним кадром", "1:15:46"),
-  vkVideo("456239050", "Лео в гостях у Жени Резниченко", "34:53"),
-];
-
-const eventWorks = [
-  vkVideo("456239028", "26 лет Студии Артемия Лебедева", "1:24"),
-  vkVideo("456239041", "НРФ // Национальный рекламный форум", "7:40"),
-  vkVideo("456239037", "Корпоративные зимние соревнования Сбербанка", "4:16"),
-  vkVideo("456239069", "Спартакиада МГТС", "3:16"),
-  vkVideo("456239071", "27 лет Студии Артемия Лебедева", "1:15"),
-  vkVideo("456239068", "МГТС Фэмили фест", "4:16"),
-  vkVideo("456239031", "Все звезды на благотворительном балу", "6:17"),
-  vkVideo("456239037", "Корпоратив «KAZminerals»", "3:23"),
-  vkVideo("456239042", "Летний тимбилдинг с бассейном", "4:32"),
-  vkVideo("456239067", "Корпоратив Fplus на 1000 человек"),
-  vkVideo("456239030", "Потрясающий по атмосфере корпоратив «Рокетбанка»", "3:37"),
-];
-
-const streamExamples = [
-  sourceVkVideo("456239036", "FSA", "5:02:20", "https://vk.com/prodmskru?z=video-59299172_456239036%2Fvideos-59299172%2Fpl_-59299172_-2"),
-  sourceVkVideo("456239034", "Презентация книги", "3:28:12"),
-  sourceVkVideo("456239035", "Летний турнир по грэпплингу", "6:10:20"),
-  sourceVkVideo("456239040", "Новогодний онлайн-корпоратив", "2:14:20"),
-];
-
-const streamFeatureVideo: VideoWork = {
-  title: "Турнир по грэпплингу FSA",
-  duration: "БЭКСТЕЙДЖ ТРАНСЛЯЦИИ",
-  href: "https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue",
-  embed: kinescopeEmbed("jCnWpQG5onNrYKL3A7fDue"),
-};
-
-const homePlaylistVideos = [
-  showreel,
-  ...caseFilms,
-  ...casePromos,
-  ...caseProjects,
-  ...eventWorks,
-  streamFeatureVideo,
-  ...streamExamples,
-];
+const caseFilms = videosByGroup("film").map(toVideoWork);
+const casePromos = videosByGroup("promo").map(toVideoWork);
+const caseProjects = videosByGroup("project").map(toVideoWork);
+const eventWorks = videosByGroup("event").map(toVideoWork);
+const streamFeatureVideo = toVideoWork(videosByGroup("stream-feature")[0]);
+const streamExamples = videosByGroup("stream").map(toVideoWork);
+const homePlaylistVideos = videoPages.map(toVideoWork);
 
 const services = [
   ["Прямые трансляции", "Организуем прямые трансляции мероприятий любого масштаба в Москве. Обеспечим многокамерную съемку, профессиональную графику и стабильное соединение для трансляции на любые онлайн-платформы", "/stream"],
@@ -147,7 +79,7 @@ function MenuMark() {
 
 function SiteHeader({ current }: { current: SitePage }) {
   const [open, setOpen] = useState(false);
-  const isActive = (href: string) => href === "/" ? current === "home" : current === href.slice(1);
+  const isActive = (href: string) => href === "/" ? current === "home" : current === href.slice(1) || (href === "/case" && current === "video");
 
   return <header className="site-header">
     <Link className="brand" href="/" onClick={() => setOpen(false)}>
@@ -187,10 +119,10 @@ function ContactMethods() {
   return <div className="contact-methods" aria-label="Способ связи"><span>Способ связи</span><span>Звонок</span><span>ВотсАп</span><span>Телеграм</span><span>Отправить</span></div>;
 }
 
-function VideoEmbed({ video, showMeta = true, showSource = true, loading = "eager" }: { video: VideoWork; showMeta?: boolean; showSource?: boolean; loading?: "eager" | "lazy" }) {
+function VideoEmbed({ video, showMeta = true, showSource = true }: { video: VideoWork; showMeta?: boolean; showSource?: boolean }) {
   return <article className="video-embed-card">
-    <div className="video-frame"><iframe src={video.embed || video.href} title={video.title} loading={loading} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen /></div>
-    {showMeta ? <div className="video-embed-meta"><div><h3>{video.title}</h3>{video.duration ? <p>{video.duration}</p> : null}</div>{showSource ? <span className="video-source">Видео</span> : null}</div> : null}
+    <div className="video-frame">{video.embed ? <SelfHostedHlsVideo src={video.embed} title={video.title} /> : <p className="video-file-pending">Исходное видео для этой работы ещё нужно подтвердить.</p>}</div>
+    {showMeta ? <div className="video-embed-meta"><div><Link href={videoPageUrl(video.slug)}><h3>{video.title}</h3></Link>{video.duration ? <p>{video.duration}</p> : null}</div>{showSource ? <Link className="video-source" href={videoPageUrl(video.slug)}>СТРАНИЦА РАБОТЫ ↗</Link> : null}</div> : null}
   </article>;
 }
 
@@ -208,6 +140,59 @@ function VideoGallery({ videos, showSelectedMeta = true, showSelectedSource = tr
       </div>
     </div>
   </div>;
+}
+
+function VideoDetailPage({ video }: { video: VideoPageData }) {
+  const related = videoPages.filter((item) => item.group === video.group && item.slug !== video.slug).slice(0, 3);
+  const pageUrl = `https://www.productionmoscow.ru${videoPageUrl(video.slug)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: video.title,
+    description: video.summary,
+    url: pageUrl,
+    contentUrl: video.providerId !== "unconfirmed" ? `https://www.productionmoscow.ru/media/video/${video.slug}/master.m3u8` : undefined,
+    inLanguage: "ru-RU",
+    keywords: video.keywords.join(", "),
+    creator: { "@type": "Organization", name: "Production Moscow", url: "https://www.productionmoscow.ru" },
+  };
+
+  return <Shell current="video">
+    <section className="video-detail-hero reveal" aria-labelledby="video-detail-title">
+      <div className="video-detail-heading">
+        <p className="eyebrow">ПОРТФОЛИО / {video.groupLabel}</p>
+        <h1 id="video-detail-title">{video.title}<span className="accent">*</span></h1>
+        <p className="video-detail-summary">{video.summary}</p>
+        <Link className="video-detail-back" href="/case">ВСЁ ПОРТФОЛИО <span aria-hidden="true">↗</span></Link>
+      </div>
+      <div className="video-detail-player">
+        <div className="video-frame">{video.providerId !== "unconfirmed" ? <SelfHostedHlsVideo src={`/media/video/${video.slug}/master.m3u8`} title={video.title} /> : <p className="video-file-pending">Исходное видео для этой работы ещё нужно подтвердить.</p>}</div>
+        <div className="video-detail-player-caption"><span>{video.groupLabel}</span>{video.duration ? <span>{video.duration}</span> : null}</div>
+      </div>
+    </section>
+
+    <section className="video-detail-story lined-section" aria-labelledby="video-detail-story-title">
+      <div className="video-detail-story-label"><p className="small-label">О ПРОЕКТЕ</p><h2 id="video-detail-story-title">Что важно<br />в этой работе<span className="accent">*</span></h2></div>
+      <div className="video-detail-story-body">
+        <p className="video-detail-description">{video.description}</p>
+        <ul className="video-detail-highlights">{video.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
+        <div className="video-detail-keywords" aria-label="Форматы и темы"><span>ФОРМАТЫ И ТЕМЫ</span>{video.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div>
+        {video.marketingTechUrl ? <p className="video-detail-source">Подробный кейс проекта: <a href={video.marketingTechUrl} target="_blank" rel="noreferrer">Marketing-Tech ↗</a></p> : null}
+      </div>
+    </section>
+
+    {related.length ? <section className="video-detail-related lined-section" aria-labelledby="video-detail-related-title">
+      <p className="small-label">ЕЩЁ ИЗ ПОРТФОЛИО</p>
+      <h2 id="video-detail-related-title">Похожие работы<span className="accent">*</span></h2>
+      <div className="video-detail-related-grid">{related.map((item) => <Link href={videoPageUrl(item.slug)} key={item.slug}><span>{item.groupLabel}</span><strong>{item.title}</strong><b aria-hidden="true">↗</b></Link>)}</div>
+    </section> : null}
+
+    <section className="video-detail-cta">
+      <div><p className="small-label">ЕСТЬ ПОХОЖАЯ ЗАДАЧА?</p><h2>Обсудим ваш<br />проект<span className="accent">*</span></h2></div>
+      <div><p>Расскажите, что хотите снять или транслировать — поможем подобрать формат и сориентируем по следующим шагам.</p><Link className="arrow-link" href="/gpt"><span>ОБСУДИТЬ С ИИ-АССИСТЕНТОМ</span><b aria-hidden="true">↗</b></Link><Link className="arrow-link" href="/contact"><span>КОНТАКТЫ ПРОДЮСЕРОВ</span><b aria-hidden="true">↗</b></Link></div>
+    </section>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+  </Shell>;
 }
 
 function FaqSection({ number, title, items, className = "" }: { number: string; title: ReactNode; items: readonly (readonly [string, string])[]; className?: string }) {
@@ -229,7 +214,7 @@ function Footer() {
 }
 
 function Shell({ current, children }: { current: SitePage; children: ReactNode }) {
-  const pageClassName = [current === "stream" ? "stream-page" : "", current === "case" ? "case-page" : "", current === "event" ? "production-event-page" : ""].filter(Boolean).join(" ");
+  const pageClassName = [current === "stream" ? "stream-page" : "", current === "case" ? "case-page" : "", current === "video" ? "video-detail-page" : "", current === "event" ? "production-event-page" : ""].filter(Boolean).join(" ");
   return <div className="site-frame"><SiteHeader current={current} /><main id="main-content" className={pageClassName || undefined}>{children}</main><Footer /></div>;
 }
 
@@ -306,7 +291,7 @@ function GptAssistantBlock() {
         <h1>AI-АССИСТЕНТ<i>*</i></h1>
         <div className="gpt-chat-shell">
           <div className="gpt-messages" ref={messagesRef} aria-live="polite">
-            {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "ProductionMoscow.ru" : "ВЫ"}</span><p>{message.content}</p>{message.cases?.length ? <div className="gpt-case-row" aria-label="Подходящие кейсы">{message.cases.map((video) => <article className="gpt-case-card" key={`${video.title}-${video.href}`}><div className="gpt-case-frame"><iframe src={video.embed} title={video.title} loading="lazy" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen /></div><a href={video.href} target="_blank" rel="noreferrer">{video.title}{video.duration ? <span>{video.duration}</span> : null}</a></article>)}</div> : null}{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
+ {messages.map((message, index) => <article className={`gpt-message gpt-message-${message.role}`} key={`${message.role}-${index}`}><span className="gpt-message-label">{message.role === "assistant" ? "ProductionMoscow.ru" : "ВЫ"}</span><p>{message.content}</p>{message.cases?.length ? <div className="gpt-case-row" aria-label="Подходящие кейсы">{message.cases.map((video) => { const external = /^https?:/i.test(video.href); return <article className="gpt-case-card" key={`${video.title}-${video.href}`}><div className="gpt-case-frame">{video.embed ? <SelfHostedHlsVideo src={video.embed} title={video.title} /> : <p className="video-file-pending">Видео будет доступно после подтверждения исходника.</p>}</div><a href={video.href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>{video.title}{video.duration ? <span>{video.duration}</span> : null}</a></article>; })}</div> : null}{message.sources?.length ? <div className="gpt-sources"><span>Материалы</span>{message.sources.map((source) => source.href ? <a href={source.href} key={`${source.title}-${source.href}`}>{source.title}</a> : <span key={source.title}>{source.title}</span>)}</div> : null}</article>)}
             {isSending ? <div className="gpt-typing" aria-label="ProductionMoscow.ru печатает"><span /><span /><span /></div> : null}
           </div>
           <form className="gpt-input-form gpt-input-form-hero" onSubmit={sendMessage}>
@@ -362,7 +347,7 @@ function EventPage() {
 function StreamPage() {
   return <Shell current="stream">
     <section className="stream-hero reveal"><div className="stream-hero-copy"><span className="stream-hero-number intro-number">01</span><div className="stream-hero-copy-main"><p className="eyebrow">ИВЕНТ-ПРОДАКШН</p><h1>ПРЯМЫЕ<br />ТРАНСЛЯЦИИ<span className="accent">*</span></h1></div></div><div className="stream-hero-feature" id="stream-case-video"><VideoEmbed video={streamFeatureVideo} /></div><div className="stream-hero-after"><div><p className="stream-hero-lead">Мы проводим трансляции на мероприятиях любого формата с полным техническим обеспечением: многокамерная съемка, графическое оформление, аренда и настройка оборудования и стабильное подключение для любых онлайн-платформ - будь то ВК, Телеграм или заграничные сервисы</p><ArrowLink href="/contact">НАПИСАТЬ</ArrowLink></div></div></section>
-    <section className="lined-section stream-case reveal"><SectionHead number="02" title={'Кейс онлайн-трансляции "Турнир по грэпплингу FSA"'} /><div className="stream-case-layout"><div className="stream-case-copy"><p>Мы сняли Бэкстейдж проведения сложной спортивной трансляции с воспроизведением повторов и лучших моментов матча после каждого поединка</p><ArrowLink href="https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue" external>СМОТРЕТЬ ВИДЕО</ArrowLink></div></div></section>
+    <section className="lined-section stream-case reveal"><SectionHead number="02" title={'Кейс онлайн-трансляции "Турнир по грэпплингу FSA"'} /><div className="stream-case-layout"><div className="stream-case-copy"><p>Мы сняли бэкстейдж сложной спортивной трансляции с повторами и лучшими моментами поединков. Посмотрите ролик на отдельной странице проекта.</p><ArrowLink href={videoPageUrl(streamFeatureVideo.slug)}>СМОТРЕТЬ ВИДЕО</ArrowLink></div></div></section>
     <section className="lined-section stream-examples reveal"><SectionHead number="03" title="Примеры проведенных нами онлайн-трансляций">Хотя большое количество трансляций проводится на закрытую аудиторию из-за соблюдения коммерческих тайн и мы не имеем право их публиковать, но несколько примеров все-таки есть</SectionHead><VideoGallery videos={streamExamples} /></section>
     <section className="lined-section stream-proof reveal"><SectionHead number="04" title="Нам благодарны">Иногда мы просим компании прислать нам фидбэк</SectionHead><div className="stream-proof-grid"><figure><Image src="/stream/thanks-hytest.png" alt="Благодарность Production Moscow от компании Хайтест" width={1680} height={1680} loading="lazy" /><figcaption>ООО «Хайтест»</figcaption></figure><figure><Image src="/stream/thanks-sber.png" alt="Благодарность Production Moscow от Сбербанка" width={1680} height={1680} loading="lazy" /><figcaption>Сбербанк</figcaption></figure><figure><Image src="/stream/thanks-resanta.png" alt="Благодарность Production Moscow от компании Ресанта" width={1680} height={1680} loading="lazy" /><figcaption>ГК «Ресанта»</figcaption></figure></div></section>
     <section className="lined-section stream-process reveal"><SectionHead number="05" title="Этапы работы" /><div className="stream-process-grid"><article><span>01</span><h3>Получение технического задания</h3><p>«Мы начинаем с того, что слушаем вас. Ваши цели, задачи, аудитория и формат мероприятия — это то, что определяет сценарий трансляции. Мы помогаем сформулировать ключевые моменты, выбираем платформы для трансляции и составляем понятное техническое задание.»</p><ul><li>Определяем формат и задачи трансляции.</li><li>Проговариваем детали (платформы, графика, структура).</li><li>При необходимости выезжаем на площадку для осмотра.</li></ul></article><article><span>02</span><h3>Подготовка оборудования и площадки</h3><p>«Мы обеспечиваем техническую сторону вашего события: от настройки света и звука до тестирования всех систем. На площадке мы устанавливаем камеры, готовим графику и настраиваем стабильное соединение для трансляции. Всё тестируется заранее, чтобы избежать любых сбоев.»</p><ul><li>Устанавливаем камеры, свет и звук.</li><li>Настраиваем графику и платформы для эфира.</li><li>Тестируем оборудование и готовим резервные системы.</li></ul></article><article><span>03</span><h3>Проведение трансляции</h3><p>«В назначенный день мы превращаем ваше событие в телешоу. Работаем с многокамерной съёмкой, живым переключением кадров и графикой, чтобы ваша аудитория увидела всё на высшем уровне. Мы следим за стабильностью трансляции, чтобы ничего не отвлекало от происходящего на экране.»</p><ul><li>Проводим многокамерную съёмку.</li><li>Используем графику и визуальные эффекты в реальном времени.</li><li>Гарантируем стабильность трансляции на всех платформах.</li></ul></article></div></section>
@@ -489,7 +474,11 @@ function FoodPage() {
   </Shell>;
 }
 
-export default function Site({ page = "home" }: { page?: SitePage }) {
+export default function Site({ page = "home", videoSlug }: { page?: SitePage; videoSlug?: string }) {
+  if (page === "video" && videoSlug) {
+    const video = videoPageBySlug(videoSlug);
+    return video ? <VideoDetailPage video={video} /> : null;
+  }
   if (page === "case") return <CasePage />;
   if (page === "event") return <EventPage />;
   if (page === "stream") return <StreamPage />;

@@ -18,6 +18,7 @@
 ## Evidence and contact
 
 - [Портфолио](https://www.productionmoscow.ru/case)
+- [Все отдельные страницы видео](https://www.productionmoscow.ru/sitemap.xml): отдельный URL, описание и темы каждой работы.
 - [Контакты](https://www.productionmoscow.ru/contact)
 - [Антон, художественный руководитель](tel:+79265399093)
 - [Михаил, генеральный продюсер](tel:+79260608970)

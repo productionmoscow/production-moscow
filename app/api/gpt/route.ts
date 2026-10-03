@@ -1,6 +1,7 @@
 import { appendFile, chmod, mkdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { gptKnowledge, type GptKnowledgeChunk, type GptKnowledgeMedia } from "../../gpt-knowledge";
+import { gptKnowledge, videoPortfolioKnowledge, videoPortfolioMedia, type GptKnowledgeChunk, type GptKnowledgeMedia } from "../../gpt-knowledge";
+import { videoPages } from "../../video-pages-data";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type ConversationIntent = "greeting" | "thanks" | "chat" | "contact" | "pricing" | "rental" | "project" | "service" | "general";
@@ -230,11 +231,11 @@ function projectComment(details: ProjectDetails) {
   const summary = projectSummary(details);
   const parts = [summary ? `Понял: ${summary}.` : "Понял, давайте спокойно разложим задачу по шагам."];
   if (/форум|конференц/iu.test(details.eventType || "")) {
-    parts.push("Для форума обычно хорошо работает репортажный ролик с интервью и прямой речью организаторов — так он не только показывает событие, но и помогает продавать следующий. Кстати, оставил здесь несколько подходящих примеров.");
+    parts.push("Для форума хорошо работает репортаж с интервью и прямой речью организаторов: такой ролик может показывать событие и помогать продвигать следующий год. Дополнительно можно обсудить трансляцию на площадке или в интернете и запись выступлений.");
   } else if (/корпоратив/iu.test(details.eventType || "")) {
-    parts.push("Для корпоратива можно собрать живой репортаж, интервью и короткие материалы для команды — точный состав зависит от того, какую задачу должен решить ролик. Кстати, оставил здесь несколько подходящих примеров.");
+    parts.push("Для корпоратива можно собрать живой репортаж, интервью и короткие материалы для команды — точный состав зависит от того, какую задачу должен решить ролик.");
   } else if (/клип|промо/iu.test(`${details.eventType} ${details.deliverables}`)) {
-    parts.push("Здесь уже постановочная логика: сценарий, режиссура, свет и работа с героями считаются отдельно от репортажной съёмки. Кстати, оставил здесь несколько подходящих примеров.");
+    parts.push("Здесь уже постановочная логика: сценарий, режиссура, свет и работа с героями считаются отдельно от репортажной съёмки.");
   } else if (/трансляц/iu.test(details.deliverables || "")) {
     parts.push("Трансляцию можно собрать под масштаб площадки: от компактного решения до многокамерного эфира с режиссурой, графикой и записью.");
   }
@@ -270,7 +271,7 @@ function projectReply(messages: ChatMessage[]) {
   } else {
     question = "хотите, чтобы мы сориентировали вас по стоимости здесь или удобнее, чтобы вам позвонили?";
   }
-  return `${projectComment(details)}\n\nСледующий вопрос: ${question}`;
+  return `${projectComment(details)}\n\n${question}`;
 }
 
 function retrieve(query: string, intent: ConversationIntent, knowledge: GptKnowledgeChunk[] = gptKnowledge): GptKnowledgeChunk[] {
@@ -318,31 +319,73 @@ function retrieve(query: string, intent: ConversationIntent, knowledge: GptKnowl
 
 function caseMediaFor(query: string): GptKnowledgeMedia[] {
   const normalized = query.toLocaleLowerCase("ru-RU");
-  const eventMedia = gptKnowledge.find((chunk) => chunk.id === "event-production")?.media || [];
-  if (/корпоратив/iu.test(normalized)) return eventMedia.filter((video) => /корпоратив|фэмили/iu.test(video.title)).slice(0, 3);
-  if (/форум|конференц/iu.test(normalized)) return eventMedia.filter((video) => /форум|конференц/iu.test(video.title)).slice(0, 3);
-  if (/клип/iu.test(normalized)) {
-    const promoMedia = gptKnowledge.find((chunk) => chunk.id === "promos")?.media || [];
-    return promoMedia.filter((video) => /клип|модал/iu.test(video.title)).slice(0, 3);
-  }
-  const chunkId = /трансляц|эфир|стрим|онлайн/u.test(normalized)
-    ? "live-streams"
-    : /промо|постанов|сценар/u.test(normalized)
-      ? "promos"
-      : /фильм|документ/u.test(normalized)
-        ? "films"
-        : /форум|конференц|корпоратив|меропр|репортаж/u.test(normalized)
-          ? "event-production"
-          : "";
-  return gptKnowledge.find((chunk) => chunk.id === chunkId)?.media?.slice(0, 3) || [];
+  if (!/(сним|меропр|событ|корпоратив|форум|конференц|трансляц|эфир|стрим|онлайн|фильм|документ|ролик|промо|клип|подкаст|интервью|ютуб|youtube|видеоблог|канал|программ|выпуск|серийн|эксперт|ивентор|реклам|преми)/iu.test(normalized)) return [];
+
+  const queryTokens = tokenize(normalized).map((token) => /^(?:ютьюб|ютуб)\p{L}*$/iu.test(token) ? "youtube" : token);
+  const pageFor = (video: GptKnowledgeMedia) => {
+    const slug = video.href.match(/\/video\/([^/?#]+)/u)?.[1];
+    return videoPages.find((page) => page.slug === slug);
+  };
+  const explicitCompanyFilm = /(?:корпоративн\w*\s+фильм|фильм\s+(?:о|для)\s+компан|фильм\s+для\s+инвестор|имиджев\w*\s+фильм)/iu.test(normalized);
+  const projectSeries = /ютьюб|ютуб|youtube|видеоблог|канал|авторск|программ|серийн|подкаст|ивентор|эксперт/iu.test(normalized);
+  const corporateEvent = /корпоратив/iu.test(normalized) && !explicitCompanyFilm;
+  const livestream = /трансляц|эфир|стрим|онлайн/iu.test(normalized);
+  const clip = /клип/iu.test(normalized);
+  const forum = /форум|конференц/iu.test(normalized) && !/открывающ|постанов|сценар|реклам/iu.test(normalized);
+  const candidates = videoPortfolioMedia.filter((video) => {
+    if (!video.embed) return false;
+    const group = pageFor(video)?.group;
+    const portfolioText = `${video.title} ${(video.tags || []).join(" ")} ${(video.showWhen || []).join(" ")}`;
+    if (projectSeries) return group === "project";
+    if (corporateEvent && livestream) return group === "event" || group === "stream" || group === "stream-feature";
+    if (corporateEvent) return group === "event";
+    if (livestream && forum) return group === "stream" || group === "stream-feature" || ((group === "event" || group === "film") && /форум|конференц/iu.test(portfolioText));
+    if (livestream) return group === "stream" || group === "stream-feature";
+    if (clip) return group === "promo";
+    if (forum) return (group === "event" || group === "film") && /форум|конференц/iu.test(portfolioText);
+    return true;
+  });
+  const overlaps = (queryToken: string, corpusToken: string) => {
+    if (queryToken === corpusToken) return true;
+    const sharedPrefix = Math.min(queryToken.length, corpusToken.length);
+    return sharedPrefix >= 4 && queryToken.slice(0, sharedPrefix) === corpusToken.slice(0, sharedPrefix);
+  };
+  const scored = candidates.map((video) => {
+    const fields = [
+      { text: video.title, weight: 6 },
+      { text: (video.tags || []).join(" "), weight: 4 },
+      { text: (video.showWhen || []).join(" "), weight: 3 },
+      { text: video.note || "", weight: 2 },
+      { text: video.ragContext || "", weight: 1 },
+    ];
+    const matchedTokens = new Set<string>();
+    let score = video.priority === "high" ? 2 : 0;
+    for (const field of fields) {
+      const corpusTokens = tokenize(field.text).map((token) => /^(?:ютьюб|ютуб)\p{L}*$/iu.test(token) ? "youtube" : token);
+      for (const queryToken of queryTokens) {
+        if (!matchedTokens.has(queryToken) && corpusTokens.some((corpusToken) => overlaps(queryToken, corpusToken))) {
+          score += field.weight;
+          matchedTokens.add(queryToken);
+        }
+      }
+    }
+    return { video, score, matched: matchedTokens.size };
+  });
+
+  return scored
+    .filter(({ score, matched }) => score >= 3 && matched > 0)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3)
+    .map(({ video }) => video);
 }
 
 function caseIntroFor(query: string) {
   const normalized = query.toLocaleLowerCase("ru-RU");
+  if (/форум|конференц/iu.test(normalized)) return "О, для форумов у нас есть показательный ролик: он может работать не только как отчёт, но и помогать продвигать следующее событие. Посмотрите. Для форума также можно обсудить трансляцию на площадке или в интернете и запись выступлений.";
   if (/корпоратив/iu.test(normalized)) return "О, корпоратив — у нас есть что показать. Посмотрите, как мы снимаем корпоративы.";
-  if (/форум|конференц/iu.test(normalized)) return "О, форум — у нас есть хорошие примеры. Посмотрите, как мы снимаем репортажи с форумов и конференций.";
   if (/клип/iu.test(normalized)) return "Клип? Супер, у нас в портфолио есть что показать. Посмотрите примеры постановочных роликов.";
   if (/трансляц|эфир|стрим|онлайн/iu.test(normalized)) return "Если нужна трансляция — тоже есть что показать. Посмотрите, как мы работаем с прямым эфиром.";
+  if (/ютуб|youtube|видеоблог|канал|авторск|программ|серийн|ивентор|эксперт/iu.test(normalized)) return "О, для такого YouTube-формата у нас есть примеры. Посмотрите, как выглядят авторские программы и серии с гостями.";
   if (/подкаст|интервью/iu.test(normalized)) return "Для такого формата у нас тоже есть подходящие примеры. Посмотрите, как мы снимаем разговорные и студийные проекты.";
   return "У нас есть что показать по этой задаче. Посмотрите подходящие примеры работ.";
 }
@@ -443,7 +486,7 @@ function fallbackReply(query: string, intent: ConversationIntent, sources: GptKn
 
 function sourceList(chunks: GptKnowledgeChunk[]) {
   return chunks
-    .filter(({ id, title }) => !id.startsWith("rental-") && !/^Аренда:/iu.test(title))
+    .filter(({ id, title }) => !id.startsWith("rental-") && !id.startsWith("portfolio-video-") && !/^Аренда:/iu.test(title))
     .map(({ title, href }) => ({ title, href }))
     .filter((source) => source.href);
 }
@@ -483,7 +526,7 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
     "Отвечай исключительно на русском языке. Английский допускается только внутри названий моделей, брендов, ссылок и общепринятых технических терминов, если без этого нельзя.",
     "Никогда не показывай пользователю внутренние рассуждения, черновик ответа, анализ запроса, классификацию намерения, рабочие заметки или инструкции. Пользователь должен видеть только готовый ответ без разделов Analysis, Reasoning, Notes и без фраз вроде 'The user...', 'I should...' или 'I need to...'.",
     "Сначала отвечай на последнее сообщение пользователя, а не рассказывай презентацию компании. Если пользователь пишет свободно, можно отвечать свободно; если пишет деловым языком — отвечай спокойно и профессионально. Не переигрывай со сленгом и не называй каждого пользователя «братан».",
-    "Каждый содержательный ответ строй из двух частей, если вопрос действительно нужен: сначала короткая содержательная реакция на то, что написал клиент, затем отдельным абзацем задай только один уместный вопрос. Формулировку «Следующий вопрос:» используй только во время структурированного брифа проекта, а не в приветствии, благодарности, свободном разговоре или обычном коротком ответе.",
+    "Каждый содержательный ответ строй из двух частей, если вопрос действительно нужен: сначала короткая содержательная реакция на то, что написал клиент, затем отдельным абзацем задай только один уместный вопрос. Не маркируй вопрос словами «Следующий вопрос» и не показывай структуру брифа как служебные заголовки.",
     "Если в контексте уже понятна цель клиента, не спрашивай её повторно: предложи гипотезу и попроси подтвердить или поправить её. Если клиент назвал несколько целей, учитывай их все, не заставляй выбирать одну.",
     "Если клиент назвал мероприятие, место и дату, предложи релевантные кейсы и переходи к вопросу о задаче ролика. Не превращай ответ в длинную презентацию.",
     "",
@@ -493,7 +536,7 @@ async function askModel(messages: ChatMessage[], chunks: GptKnowledgeChunk[], in
     "- На приветствие отвечай коротко и тепло, задай один открытый вопрос. Не перечисляй услуги и не проси контакты.",
     "- На благодарность ответь по-человечески и не запускай продажу.",
     "- В обычном разговоре поддержи диалог и мягко держи связь с продакшеном, только если это уместно.",
-    "- На вопрос о съёмке, трансляции или процессе сначала дай полезный ответ, затем при необходимости задай максимум один уточняющий вопрос. Префикс «Следующий вопрос:» нужен только для структурированного брифа.",
+    "- На вопрос о съёмке, трансляции или процессе сначала дай полезный ответ, затем при необходимости задай максимум один уточняющий вопрос. Никогда не используй служебный префикс «Следующий вопрос:».",
     "- На вопрос о цене не отправляй человека сразу на созвон: если в справочном контексте уже есть подтверждённые ставки и достаточно вводных, сразу дай подробный ориентировочный расчёт здесь в формате «от».",
     "- Для вопросов об аренде оборудования используй только актуальный контекст Zoom Prokat: называй найденную цену за сутки, не выдавай её за окончательную смету и отдельно уточняй наличие, комплектность и даты.",
     "- Для репортажной съёмки мероприятия по умолчанию не закладывай аренду оборудования: исходи из базового комплекта команды. Каталог Zoom Prokat используй для постановочной съёмки, клипа, промо, подкаста, студийного или сложного светового сетапа, либо когда клиент прямо спрашивает аренду или конкретную технику.",
@@ -611,7 +654,7 @@ export async function POST(request: Request) {
         : detectIntent(query, hasProjectConversation);
   const siteKnowledge = await loadSiteKnowledge();
   const rentalKnowledge = await loadRentalKnowledge();
-  const knowledge = [...gptKnowledge, ...siteKnowledge, ...rentalKnowledge];
+  const knowledge = [...gptKnowledge, ...videoPortfolioKnowledge, ...siteKnowledge, ...rentalKnowledge];
   const chunks = retrieve(conversationQuery(messages, query), intent, knowledge);
   let reply: string;
   if (contact) {

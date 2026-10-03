@@ -64,7 +64,7 @@ test("all Production Moscow public routes render their primary content", async (
   }
 });
 
-test("portfolio page renders all source playlists", async () => {
+test("portfolio page renders its playlists with links to self-hosted video pages", async () => {
   const response = await render("/case");
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -77,8 +77,8 @@ test("portfolio page renders all source playlists", async () => {
   assert.match(html, /Операторский скилл - часовой подкаст/);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 3);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 17);
-  for (const id of ["456239022", "456239049", "456239059"]) {
-    assert.match(html, new RegExp(`id=${id}`));
+  for (const slug of ["olga-nechaeva-film", "upyr-host-promo", "dark-side-podcast"]) {
+    assert.match(html, new RegExp(`href="/video/${slug}"`));
   }
   for (const title of ["Открывающий ролик конференции EdCrunch", "Коробков и Зубков", "Лео в гостях у Жени Резниченко"]) {
     assert.match(html, new RegExp(title));
@@ -93,17 +93,17 @@ test("stream page preserves source content, media, process and FAQ", async () =>
   assert.match(html, /ПРЯМЫЕ<br\/>ТРАНСЛЯЦИИ/);
   assert.match(html, /Мы проводим трансляции на мероприятиях любого формата/);
   assert.match(html, /онлайн-платформ - будь то ВК, Телеграм или заграничные сервисы/);
-  assert.match(html, /kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/);
-  assert.equal((html.match(/kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/g) ?? []).length, 2);
+  assert.match(html, /href="\/video\/fsa-grappling-backstage"/);
+  assert.doesNotMatch(html, /kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 1);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 4);
   for (const title of ["FSA", "Презентация книги", "Летний турнир по грэпплингу", "Новогодний онлайн-корпоратив", "Получение технического задания", "Подготовка оборудования и площадки", "Проведение трансляции"]) {
     assert.match(html, new RegExp(title));
   }
-  for (const id of ["456239036", "456239034", "456239035", "456239040"]) {
-    assert.match(html, new RegExp(id));
+  for (const slug of ["fsa-grappling-livestream", "book-presentation-stream", "summer-grappling-stream", "new-year-online-corporate"]) {
+    assert.match(html, new RegExp(`href="/video/${slug}"`));
   }
-  assert.match(html, /vk\.com\/video-59299172_456239034/);
+  assert.doesNotMatch(html, /(?:kinescope\.io\/embed|vk\.com\/video_ext\.php)/);
   assert.equal((html.match(/<details>/g) ?? []).length, 8);
   assert.match(html, /thanks-hytest\.png/);
   assert.match(html, /thanks-sber\.png/);
@@ -185,7 +185,32 @@ test("crawler metadata exposes the new canonical host", async () => {
   for (const path of ["/", "/case", "/event", "/stream", "/food", "/politika", "/studio", "/kiselev", "/golf", "/pokavsedoma", "/vsacademy", "/gnivts", "/contact", "/gpt", "/conf"]) {
     assert.match(sitemap, new RegExp(`<loc>https://www\\.productionmoscow\\.ru${path}<\\/loc>`));
   }
+  const videoPaths = [...sitemap.matchAll(/<loc>https:\/\/www\.productionmoscow\.ru\/video\/([^<]+)<\/loc>/gu)].map((match) => match[1]);
+  assert.equal(videoPaths.length, 34);
+  assert.equal(new Set(videoPaths).size, 34);
   assert.doesNotMatch(sitemap, /antonchernov|promodemo|wedding|\/mk/);
+});
+
+test("all 34 video pages are independently rendered and indexed for agents", async () => {
+  const sitemap = await (await render("/sitemap.xml")).text();
+  const videoSlugs = [...sitemap.matchAll(/<loc>https:\/\/www\.productionmoscow\.ru\/video\/([^<]+)<\/loc>/gu)].map((match) => match[1]);
+  const llms = await (await render("/llms.md")).text();
+  assert.equal(videoSlugs.length, 34);
+
+  for (const slug of videoSlugs) {
+    const response = await render(`/video/${slug}`);
+    assert.equal(response.status, 200, slug);
+    const html = await response.text();
+    assert.match(html, /class="video-detail-hero"/, slug);
+    assert.match(html, /rel="canonical"/, slug);
+    assert.ok(llms.includes(`/video/${slug}`), slug);
+    if (slug === "kazminerals-corporate") {
+      assert.match(html, /исходный видеофайл/i, slug);
+      assert.doesNotMatch(html, new RegExp(`/media/video/${slug}/master\\.m3u8`), slug);
+    } else {
+      assert.ok(html.includes(`/media/video/${slug}/master.m3u8`), slug);
+    }
+  }
 });
 
 test("Anton-only routes are not published", async () => {

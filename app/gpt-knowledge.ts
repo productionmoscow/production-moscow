@@ -1,3 +1,5 @@
+import { videoPageForSource, videoPageUrl, videoPages } from "./video-pages-data";
+
 export type GptKnowledgeChunk = {
   id: string;
   title: string;
@@ -21,13 +23,16 @@ export type GptKnowledgeMedia = {
 
 type GptKnowledgeMediaMeta = Pick<GptKnowledgeMedia, "tags" | "showWhen" | "note" | "ragContext" | "related" | "priority">;
 
-const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`, meta: GptKnowledgeMediaMeta = {}): GptKnowledgeMedia => ({
-  title,
-  duration,
-  href,
-  embed: `https://vk.com/video_ext.php?oid=-59299172&id=${id}`,
-  ...meta,
-});
+const vkMedia = (id: string, title: string, duration?: string, href = `https://vk.com/video-59299172_${id}`, meta: GptKnowledgeMediaMeta = {}): GptKnowledgeMedia => {
+  const videoPage = videoPageForSource("vk", id, title);
+  return {
+    title,
+    duration,
+    href: videoPage ? videoPageUrl(videoPage.slug) : href,
+    embed: videoPage && videoPage.providerId !== "unconfirmed" ? `/media/video/${videoPage.slug}/master.m3u8` : "",
+    ...meta,
+  };
+};
 
 /**
  * Small, versioned knowledge base for the Production Moscow assistant.
@@ -92,7 +97,7 @@ export const gptKnowledge: GptKnowledgeChunk[] = [
         showWhen: ["клиенту нужна трансляция спортивного турнира", "важны повторы и работа с несколькими камерами", "нужно объяснить сложность спортивного эфира", "клиент спрашивает про полноценную запись турнира"],
         note: "Целиком транслировали турнир по грэпплингу: четыре камеры, повторы и сложная режиссура спортивного эфира. На странице трансляций есть отдельный бэкстейдж, где Мишаня рассказывает о технических и организационных сложностях проекта.",
         ragContext: "Показывать как пример сложной спортивной трансляции, а не просто съёмки соревнований: четыре камеры, повторы, режиссура эфира и полная запись турнира. Вместе с этим видео предлагать посмотреть бэкстейдж на странице трансляций, где Мишаня объясняет, как устроен такой проект и почему он требует серьёзной команды и техники.",
-        related: [{ title: "Бэкстейдж трансляции турнира по грэпплингу FSA", href: "/stream#stream-case-video", embed: "https://kinescope.io/embed/jCnWpQG5onNrYKL3A7fDue" }],
+        related: [{ title: "Бэкстейдж трансляции турнира по грэпплингу FSA", href: "/video/fsa-grappling-backstage", embed: "/media/video/fsa-grappling-backstage/master.m3u8" }],
       }),
       vkMedia("456239034", "Презентация книги", "3:28:12", undefined, {
         tags: ["трансляция"],
@@ -240,3 +245,44 @@ export const gptKnowledge: GptKnowledgeChunk[] = [
     href: "/contact",
   },
 ];
+
+const curatedPortfolioMedia = gptKnowledge.flatMap((chunk) => chunk.media || []);
+
+// Keep every portfolio video available to case retrieval. Handwritten RAG notes
+// take precedence; other entries are searchable from their reviewed page facts.
+export const videoPortfolioMedia: GptKnowledgeMedia[] = videoPages.map((video) => {
+  const href = videoPageUrl(video.slug);
+  const curated = curatedPortfolioMedia.find((item) => item.href === href);
+  if (curated) return curated;
+
+  const themes = video.keywords;
+  return {
+    title: video.title,
+    duration: video.duration,
+    href,
+    embed: video.providerId === "unconfirmed" ? "" : `/media/video/${video.slug}/master.m3u8`,
+    tags: themes,
+    showWhen: themes.map((theme) => `клиенту нужен пример про ${theme}`),
+    note: video.summary,
+    ragContext: `${video.summary} ${video.description} ${video.highlights.join(" ")}`,
+    priority: video.priority,
+  };
+});
+
+export const videoPortfolioKnowledge: GptKnowledgeChunk[] = videoPortfolioMedia.map((video) => {
+  const slug = video.href.match(/\/video\/([^/?#]+)/u)?.[1] || video.title;
+  const content = [
+    video.note,
+    video.ragContext,
+    video.tags?.length ? `Темы: ${video.tags.join(", ")}.` : "",
+    video.showWhen?.length ? `Показывать, когда: ${video.showWhen.join("; ")}.` : "",
+  ].filter(Boolean).join("\n");
+
+  return {
+    id: `portfolio-video-${slug}`,
+    title: `Пример в портфолио: ${video.title}`,
+    content,
+    href: video.href,
+    media: [video],
+  };
+});

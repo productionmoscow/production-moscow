@@ -56,6 +56,7 @@ if [[ -f "$env_file" ]]; then
   source "$env_file"
   set +a
 fi
+export PRODUCTIONMOSCOW_VIDEO_ROOT="${PRODUCTIONMOSCOW_VIDEO_ROOT:-/Volumes/cloud/productionmoscow-video-assets}"
 cd "$current"
 "$NODE_BIN/npm" run start -- --hostname 127.0.0.1 --port 3011 &
 app_pid=$!
