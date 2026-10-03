@@ -102,9 +102,9 @@ jobs:
             exit 1
           fi
 
-          install -d -m 700 "$backup"
+          mkdir -m 700 "$backup"
           ditto "$DEPLOY_ROOT" "$backup/site-root"
-          install -d -m 700 "$backup/launchAgents"
+          mkdir -m 700 "$backup/launchAgents"
           ditto "$launch_agent" "$backup/launchAgents/com.productionmoscow.knowledge-crawler.plist"
           printf '%s\n' "$old_current" > "$backup/current-target.txt"
 
