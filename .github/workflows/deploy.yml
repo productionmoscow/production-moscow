@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           backup_root="/Volumes/cloud/Mac-mini-server-backups"
-          backup="$backup_root/production-moscow-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          backup="$backup_root/pm-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           service="gui/$(id -u)/$SERVICE_LABEL"
           launch_agent="$HOME/Library/LaunchAgents/com.productionmoscow.knowledge-crawler.plist"
 
