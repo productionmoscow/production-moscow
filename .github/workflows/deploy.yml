@@ -65,7 +65,7 @@ jobs:
           launchctl print "$service" >/dev/null
           test -f "$launch_agent"
           test -L "$DEPLOY_ROOT/current"
-          test -f "$DEPLOY_ROOT/current/dist/index.html"
+          test -f "$DEPLOY_ROOT/current/dist/server/index.js"
           test -f "$DEPLOY_ROOT/zoom-prokat-parser/package-lock.json"
           test -f "$DEPLOY_ROOT/data/zoom-prokat/zoom-prokat-prices.xlsx"
           test -f "$DEPLOY_ROOT/data/zoom-prokat-knowledge/manifest.json"
@@ -109,8 +109,8 @@ jobs:
           printf '%s\n' "$old_current" > "$backup/current-target.txt"
 
           test -L "$backup/site-root/current"
-          cmp -s "$DEPLOY_ROOT/current/dist/index.html" \
-            "$backup/site-root/releases/${old_current##*/}/dist/index.html"
+          cmp -s "$DEPLOY_ROOT/current/dist/server/index.js" \
+            "$backup/site-root/releases/${old_current##*/}/dist/server/index.js"
           cmp -s "$DEPLOY_ROOT/zoom-prokat-parser/package-lock.json" \
             "$backup/site-root/zoom-prokat-parser/package-lock.json"
           cmp -s "$DEPLOY_ROOT/data/zoom-prokat/zoom-prokat-prices.xlsx" \
