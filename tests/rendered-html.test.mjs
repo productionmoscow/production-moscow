@@ -24,7 +24,11 @@ test("server-renders the Production Moscow home page", async () => {
   assert.match(html, /Надёжный видеопродакшн для мероприятий и бизнеса/);
   assert.match(html, /Форумы, конференции и корпоративные события\./);
   assert.match(html, /Полный цикл производства: съёмка, трансляции и монтаж/);
-  assert.match(html, /ПОСМОТРИТЕ НАШ ШОУРИЛ/);
+  assert.match(html, /class="hero-video-head"/);
+  assert.match(html, /ИЗБРАННОЕ/);
+  assert.match(html, /34 ВИДЕО/);
+  assert.match(html, /href="\/video\/showreel"/);
+  assert.equal((html.match(/class="video-choice /g) ?? []).length, 34);
   assert.match(html, /Что мы можем\?/);
   for (const title of ["Прямые трансляции", "Фильмы для мероприятий", "Промо-ролики", "Съемка мероприятий", "Музыкальные клипы для кавер-групп", "Документальные фильмы"]) {
     assert.match(html, new RegExp(title));
@@ -73,14 +77,14 @@ test("portfolio page renders its playlists with links to self-hosted video pages
   assert.match(html, /Ведущим, агентствам, декораторам, диджеям, всем-всем-всем/);
   assert.match(html, /Мы любим снимать необычные и обычные проекты/);
   assert.match(html, /мероприятиям - будь то День рождения компании или человека/);
-  assert.match(html, /Подкаст Адиса Маммо «Темная Сторона»\. Гость - Виктор Комаров/);
-  assert.match(html, /Операторский скилл - часовой подкаст/);
+  assert.match(html, /Подкаст «Тёмная сторона» с Виктором Комаровым/);
+  assert.match(html, /Точка сборки/);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 3);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 17);
   for (const slug of ["olga-nechaeva-film", "upyr-host-promo", "dark-side-podcast"]) {
     assert.match(html, new RegExp(`href="/video/${slug}"`));
   }
-  for (const title of ["Открывающий ролик конференции EdCrunch", "Коробков и Зубков", "Лео в гостях у Жени Резниченко"]) {
+  for (const title of ["Открывающий ролик конференции EdCrunch", "Промо Коробкова и Зубкова", "Лео в гостях у Жени Резниченко"]) {
     assert.match(html, new RegExp(title));
   }
 });
@@ -97,11 +101,11 @@ test("stream page preserves source content, media, process and FAQ", async () =>
   assert.doesNotMatch(html, /kinescope\.io\/embed\/jCnWpQG5onNrYKL3A7fDue/);
   assert.equal((html.match(/class="video-gallery"/g) ?? []).length, 1);
   assert.equal((html.match(/class="video-choice /g) ?? []).length, 4);
-  for (const title of ["FSA", "Презентация книги", "Летний турнир по грэпплингу", "Новогодний онлайн-корпоратив", "Получение технического задания", "Подготовка оборудования и площадки", "Проведение трансляции"]) {
+  for (const title of ["FSA", "Трансляция презентации книги", "Летний турнир по грэпплингу", "Новогодний онлайн-корпоратив для всех регионов", "Получение технического задания", "Подготовка оборудования и площадки", "Проведение трансляции"]) {
     assert.match(html, new RegExp(title));
   }
   for (const slug of ["fsa-grappling-livestream", "book-presentation-stream", "summer-grappling-stream", "new-year-online-corporate"]) {
-    assert.match(html, new RegExp(`href="/video/${slug}"`));
+    assert.match(html, new RegExp(`data-video-url="/video/${slug}"`));
   }
   assert.doesNotMatch(html, /(?:kinescope\.io\/embed|vk\.com\/video_ext\.php)/);
   assert.equal((html.match(/<details>/g) ?? []).length, 8);
@@ -208,7 +212,7 @@ test("all 34 video pages are independently rendered and indexed for agents", asy
       assert.match(html, /marketing-tech\.ru\/cases\/productionmoscow-ru\//, slug);
     }
     if (slug === "kazminerals-corporate") {
-      assert.match(html, /исходный видеофайл/i, slug);
+      assert.match(html, /Исходное видео для этой работы ещё нужно подтвердить/i, slug);
       assert.doesNotMatch(html, new RegExp(`/media/video/${slug}/master\\.m3u8`), slug);
     } else {
       assert.ok(html.includes(`/media/video/${slug}/master.m3u8`), slug);

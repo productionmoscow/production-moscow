@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: productionmoscow-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -49,30 +49,113 @@ jobs:
           npm ci --prefix scripts/zoom-prokat-parser --ignore-scripts --no-audit --no-fund
           npm test --prefix scripts/zoom-prokat-parser
 
+      - name: Preflight and back up current Production Moscow
+        id: backup
+        run: |
+          set -euo pipefail
+          backup_root="/Volumes/cloud/Mac-mini-server-backups"
+          backup="$backup_root/production-moscow-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          service="gui/$(id -u)/$SERVICE_LABEL"
+          launch_agent="$HOME/Library/LaunchAgents/com.productionmoscow.knowledge-crawler.plist"
+
+          test -d "$backup_root"
+          test ! -e "$backup"
+          test -x "$DOCKER_BIN"
+          "$DOCKER_BIN" ps --format 'table {{.Names}}\t{{.Status}}'
+          launchctl print "$service" >/dev/null
+          test -f "$launch_agent"
+          test -L "$DEPLOY_ROOT/current"
+          test -f "$DEPLOY_ROOT/current/dist/index.html"
+          test -f "$DEPLOY_ROOT/zoom-prokat-parser/package-lock.json"
+          test -f "$DEPLOY_ROOT/data/zoom-prokat/zoom-prokat-prices.xlsx"
+          test -f "$DEPLOY_ROOT/data/zoom-prokat-knowledge/manifest.json"
+          test ! -d "$DEPLOY_ROOT/data/.knowledge-crawler.lock"
+
+          check_http() {
+            local url="$1" timeout="$2" status
+            status="$(curl --silent --show-error --location --max-time "$timeout" \
+              --output /dev/null --write-out '%{http_code}' "$url")"
+            if [ "$status" != 200 ]; then
+              echo "Expected HTTP 200 for $url, got $status" >&2
+              return 1
+            fi
+          }
+          for path in / /gpt /sitemap.xml /robots.txt /llms.txt /llms.md; do
+            check_http "https://www.productionmoscow.ru$path" 15
+          done
+          for path in / /gpt; do
+            check_http "http://127.0.0.1:3011$path" 10
+          done
+
+          old_current="$(readlink "$DEPLOY_ROOT/current")"
+          case "$old_current" in
+            "$DEPLOY_ROOT"/releases/*) ;;
+            *) echo "Unexpected current release target: $old_current" >&2; exit 1 ;;
+          esac
+          test -d "$old_current"
+
+          source_kb="$(du -sk "$DEPLOY_ROOT" | awk '{print $1}')"
+          free_kb="$(df -Pk "$backup_root" | awk 'END {print $4}')"
+          required_kb=$((source_kb + source_kb / 10))
+          if [ "$free_kb" -lt "$required_kb" ]; then
+            echo "Not enough free space for verified backup: need ${required_kb}KB, have ${free_kb}KB" >&2
+            exit 1
+          fi
+
+          install -d -m 700 "$backup"
+          ditto "$DEPLOY_ROOT" "$backup/site-root"
+          install -d -m 700 "$backup/launchAgents"
+          ditto "$launch_agent" "$backup/launchAgents/com.productionmoscow.knowledge-crawler.plist"
+          printf '%s\n' "$old_current" > "$backup/current-target.txt"
+
+          test -L "$backup/site-root/current"
+          cmp -s "$DEPLOY_ROOT/current/dist/index.html" \
+            "$backup/site-root/releases/${old_current##*/}/dist/index.html"
+          cmp -s "$DEPLOY_ROOT/zoom-prokat-parser/package-lock.json" \
+            "$backup/site-root/zoom-prokat-parser/package-lock.json"
+          cmp -s "$DEPLOY_ROOT/data/zoom-prokat/zoom-prokat-prices.xlsx" \
+            "$backup/site-root/data/zoom-prokat/zoom-prokat-prices.xlsx"
+          cmp -s "$DEPLOY_ROOT/data/zoom-prokat-knowledge/manifest.json" \
+            "$backup/site-root/data/zoom-prokat-knowledge/manifest.json"
+          cmp -s "$launch_agent" \
+            "$backup/launchAgents/com.productionmoscow.knowledge-crawler.plist"
+
+          echo "dir=$backup" >> "$GITHUB_OUTPUT"
+          echo "old_current=$old_current" >> "$GITHUB_OUTPUT"
+
       - name: Deploy release locally
+        id: deploy
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          BACKUP_DIR: ${{ steps.backup.outputs.dir }}
         run: |
           set -euo pipefail
           test -x "$DOCKER_BIN"
           test -f deploy/macos/productionmoscow-start.sh
           test -f deploy/macos/productionmoscow-bridge.mjs
+          test -f "$BACKUP_DIR/current-target.txt"
 
           install -d -m 755 "$DEPLOY_ROOT/releases" "$DEPLOY_ROOT/bin"
           install -d -m 700 "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/config"
           install -d -m 755 "$DEPLOY_ROOT/logs"
-          rm -rf -- "$DEPLOY_ROOT/zoom-prokat-parser"
-          install -d -m 755 "$DEPLOY_ROOT/zoom-prokat-parser"
-          rsync -a --checksum scripts/zoom-prokat-parser/ "$DEPLOY_ROOT/zoom-prokat-parser/"
-          npm ci --prefix "$DEPLOY_ROOT/zoom-prokat-parser" --ignore-scripts --no-audit --no-fund
+          run_id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          parser_versions="$DEPLOY_ROOT/parser-releases"
+          parser_stage="$parser_versions/staged-$run_id"
+          parser_previous="$parser_versions/previous-$run_id"
+          release="$DEPLOY_ROOT/releases/$GITHUB_SHA-$run_id"
+          test ! -e "$parser_stage"
+          test ! -e "$parser_previous"
+          test ! -e "$release"
+          install -d -m 755 "$parser_versions" "$parser_stage"
+          rsync -a --checksum scripts/zoom-prokat-parser/ "$parser_stage/"
+          npm ci --prefix "$parser_stage" --ignore-scripts --no-audit --no-fund
+          npm test --prefix "$parser_stage"
           if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
             umask 077
             printf 'OPENROUTER_API_KEY=%s\nPRODUCTIONMOSCOW_AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free\nPRODUCTIONMOSCOW_AI_BASE_URL=https://openrouter.ai/api/v1\n' \
               "$OPENROUTER_API_KEY" > "$DEPLOY_ROOT/config/productionmoscow.env"
             chmod 600 "$DEPLOY_ROOT/config/productionmoscow.env"
           fi
-          release="$DEPLOY_ROOT/releases/$GITHUB_SHA"
-          rm -rf -- "$release"
           install -d -m 755 "$release"
           rsync -a --checksum dist/ "$release/dist/"
           install -m 644 package.json package-lock.json "$release/"
@@ -90,7 +173,16 @@ jobs:
           "$DEPLOY_ROOT/runtime/node/bin/npm" ci \
             --prefix "$release" --ignore-scripts --no-audit --no-fund
 
-          ln -sfn "$release" "$DEPLOY_ROOT/current"
+          if [ -e "$DEPLOY_ROOT/zoom-prokat-parser" ] || [ -L "$DEPLOY_ROOT/zoom-prokat-parser" ]; then
+            mv "$DEPLOY_ROOT/zoom-prokat-parser" "$parser_previous"
+          fi
+          mv "$parser_stage" "$DEPLOY_ROOT/zoom-prokat-parser"
+
+          temporary_link="$DEPLOY_ROOT/.current-$run_id"
+          ln -s "$release" "$temporary_link"
+          node -e 'require("node:fs").renameSync(process.argv[1], process.argv[2])' \
+            "$temporary_link" "$DEPLOY_ROOT/current"
+          echo "parser_previous=$parser_previous" >> "$GITHUB_OUTPUT"
 
       - name: Install weekly knowledge crawler
         run: |
@@ -104,6 +196,7 @@ jobs:
           launchctl bootstrap "gui/$(id -u)" "$plist"
 
       - name: Refresh knowledge immediately
+        id: refresh_knowledge
         run: |
           set -euo pipefail
           "$DEPLOY_ROOT/bin/productionmoscow-knowledge-start.sh"
@@ -116,35 +209,127 @@ jobs:
           launchctl kickstart -k "$service"
 
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error --max-time 5 \
-              http://127.0.0.1:3011/ >/dev/null; then
-              exit 0
+            healthy=true
+            for path in / /gpt; do
+              if ! curl --fail --silent --show-error --max-time 5 \
+                "http://127.0.0.1:3011$path" >/dev/null; then
+                healthy=false
+                break
+              fi
+            done
+            if [ "$healthy" = true ]; then
+              break
             fi
             sleep 2
           done
 
-          echo 'Production Moscow service did not become healthy within 60 seconds' >&2
-          launchctl print "$service" || true
-          exit 1
+          if [ "$healthy" != true ]; then
+            echo 'Production Moscow service did not become healthy within 60 seconds' >&2
+            launchctl print "$service" || true
+            exit 1
+          fi
 
-      - name: Remove old Production Moscow releases
-        if: success()
+      - name: Verify public routes and static assets
         run: |
           set -euo pipefail
-          current_release="$(readlink "$DEPLOY_ROOT/current" || true)"
-          keep=4
+          node --input-type=module <<'NODE'
+          const origin = 'https://www.productionmoscow.ru';
+          const timeout = 20000;
+          const request = async (url, options = {}) => {
+            const response = await fetch(url, { ...options, signal: AbortSignal.timeout(timeout) });
+            if (!response.ok) throw new Error(`${options.method ?? 'GET'} ${url}: HTTP ${response.status}`);
+            return response;
+          };
 
-          find "$DEPLOY_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -print0 \
-            | xargs -0 -n1 stat -f '%m %N' \
-            | sort -rn \
-            | cut -d' ' -f2- \
-            | while IFS= read -r release; do
-                if [ "$release" = "$current_release" ]; then
-                  continue
-                fi
-                if [ "$keep" -gt 0 ]; then
-                  keep=$((keep - 1))
-                else
-                  rm -rf -- "$release"
-                fi
-              done
+          const critical = ['/', '/gpt', '/sitemap.xml', '/robots.txt', '/llms.txt', '/llms.md'];
+          for (const path of critical) await request(new URL(path, origin));
+
+          const sitemap = await (await request(new URL('/sitemap.xml', origin))).text();
+          const routes = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) =>
+            match[1].replaceAll('&amp;', '&').trim(),
+          );
+          if (routes.length < 2) throw new Error(`Expected a populated sitemap, found ${routes.length} routes`);
+
+          const pages = new Set([...critical.filter((path) => path === '/' || path === '/gpt').map((path) => new URL(path, origin).href), ...routes]);
+          const assets = new Set();
+          for (const href of pages) {
+            const url = new URL(href);
+            if (url.origin !== origin) throw new Error(`Unexpected off-site sitemap route: ${url}`);
+            const response = await request(url);
+            const html = await response.text();
+            for (const tag of html.matchAll(/<(script|link|img|video)\b[^>]*>/gi)) {
+              const kind = tag[1].toLowerCase();
+              const element = tag[0];
+              const attr = kind === 'script' || kind === 'img' ? 'src' : kind === 'video' ? 'poster' : 'href';
+              if (kind === 'link' && !/rel=["'][^"']*(?:stylesheet|icon)/i.test(element)) continue;
+              const value = element.match(new RegExp(`${attr}=["']([^"']+)`, 'i'))?.[1]
+                ?.replaceAll('&amp;', '&')
+                .replaceAll('&quot;', '"')
+                .replaceAll('&#x27;', "'");
+              if (!value || value.startsWith('data:')) continue;
+              const asset = new URL(value, url);
+              if (asset.origin === origin) assets.add(asset.href);
+            }
+          }
+
+          for (const asset of assets) await request(new URL(asset), { method: 'HEAD' });
+          console.log(`Verified ${pages.size} public routes and ${assets.size} same-origin static assets.`);
+          NODE
+
+      - name: Roll back Production Moscow after failed deployment
+        if: failure() && steps.backup.outcome == 'success'
+        env:
+          BACKUP_DIR: ${{ steps.backup.outputs.dir }}
+          OLD_CURRENT: ${{ steps.backup.outputs.old_current }}
+        run: |
+          set -euo pipefail
+          run_id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          rollback_dir="$DEPLOY_ROOT/rollback/$run_id"
+          parser_previous="$DEPLOY_ROOT/parser-releases/previous-$run_id"
+          install -d -m 700 "$rollback_dir"
+
+          if [ -e "$parser_previous" ]; then
+            if [ -e "$DEPLOY_ROOT/zoom-prokat-parser" ] || [ -L "$DEPLOY_ROOT/zoom-prokat-parser" ]; then
+              mv "$DEPLOY_ROOT/zoom-prokat-parser" "$rollback_dir/zoom-prokat-parser-after-failure"
+            fi
+            mv "$parser_previous" "$DEPLOY_ROOT/zoom-prokat-parser"
+          fi
+
+          for path in config bin data; do
+            if [ -e "$DEPLOY_ROOT/$path" ]; then
+              mv "$DEPLOY_ROOT/$path" "$rollback_dir/$path-after-failure"
+            fi
+            if [ -e "$BACKUP_DIR/site-root/$path" ]; then
+              ditto "$BACKUP_DIR/site-root/$path" "$DEPLOY_ROOT/$path"
+            fi
+          done
+
+          launch_agent="$HOME/Library/LaunchAgents/com.productionmoscow.knowledge-crawler.plist"
+          if [ -f "$launch_agent" ]; then
+            mv "$launch_agent" "$rollback_dir/knowledge-crawler-after-failure.plist"
+          fi
+          ditto "$BACKUP_DIR/launchAgents/com.productionmoscow.knowledge-crawler.plist" "$launch_agent"
+          label="gui/$(id -u)/com.productionmoscow.knowledge-crawler"
+          launchctl bootout "$label" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$launch_agent"
+
+          rollback_link="$DEPLOY_ROOT/.current-rollback-$run_id"
+          ln -s "$OLD_CURRENT" "$rollback_link"
+          node -e 'require("node:fs").renameSync(process.argv[1], process.argv[2])' \
+            "$rollback_link" "$DEPLOY_ROOT/current"
+
+          service="gui/$(id -u)/$SERVICE_LABEL"
+          launchctl kickstart -k "$service"
+          check_http() {
+            local url="$1" timeout="$2" status
+            status="$(curl --silent --show-error --location --max-time "$timeout" \
+              --output /dev/null --write-out '%{http_code}' "$url")"
+            if [ "$status" != 200 ]; then
+              echo "Expected HTTP 200 for $url after rollback, got $status" >&2
+              return 1
+            fi
+          }
+          for path in / /gpt; do
+            check_http "http://127.0.0.1:3011$path" 15
+            check_http "https://www.productionmoscow.ru$path" 20
+          done
