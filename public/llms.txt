@@ -2,12 +2,12 @@
 
 > Production Moscow — московский видеопродакшн полного цикла для мероприятий и бизнеса; работает в Москве и обсуждает выездные проекты по России.
 
-## Agent profile
+## Профиль для AI-агентов
 
 - [Подробный профиль для AI-агентов](https://www.productionmoscow.ru/llms.md): услуги, подходящие задачи, вопросы для брифа, границы и контакты.
 - [AI-чат Production Moscow](https://www.productionmoscow.ru/gpt): начать разговор о задаче.
 
-## Main services
+## Основные услуги
 
 - [Съёмка мероприятий](https://www.productionmoscow.ru/event): корпоративы, форумы, конференции, презентации, спортивные события, концерты и шоу.
 - [Прямые трансляции](https://www.productionmoscow.ru/stream): многокамерная съёмка, режиссура, графика, подключение и запись эфира.
@@ -15,7 +15,14 @@
 - [Промо и постановочные проекты](https://www.productionmoscow.ru/case#promos): промо-ролики, музыкальные клипы, подкасты, интервью и нестандартные проекты.
 - [Фуд-фото и меню](https://www.productionmoscow.ru/food): контент для ресторанов, кафе и сервисов доставки.
 
-## Evidence and contact
+## Выбранные примеры
+
+- [Национальный рекламный форум](https://www.productionmoscow.ru/video/nrf-forum-film): ролик как инструмент продвижения и продажи билетов на следующий год.
+- [Зимняя Сбербанкиада](https://www.productionmoscow.ru/video/sberbank-winter-games): многодневная многокамерная съёмка с оперативным монтажом.
+- [Трансляция FSA PRO CUP](https://www.productionmoscow.ru/video/fsa-grappling-livestream): многокамерный турнирный эфир с повторами.
+- [YouTube-проект «Бобров+»](https://www.productionmoscow.ru/video/bobrov-plus-top100): серия выпусков с героями ивент-индустрии.
+
+## Источники и контакты
 
 - [Портфолио](https://www.productionmoscow.ru/case)
 - [Все отдельные страницы видео](https://www.productionmoscow.ru/sitemap.xml): отдельный URL, описание и темы каждой работы.

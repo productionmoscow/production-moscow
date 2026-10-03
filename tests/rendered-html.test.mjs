@@ -201,9 +201,12 @@ test("all 34 video pages are independently rendered and indexed for agents", asy
     const response = await render(`/video/${slug}`);
     assert.equal(response.status, 200, slug);
     const html = await response.text();
-    assert.match(html, /class="video-detail-hero"/, slug);
+    assert.match(html, /class="video-detail-hero(?:\s|")/u, slug);
     assert.match(html, /rel="canonical"/, slug);
     assert.ok(llms.includes(`/video/${slug}`), slug);
+    if (["dmitry-dibrov-podcast", "olga-nechaeva-film", "itagency-team-film", "sberbank-winter-games", "fsa-grappling-livestream"].includes(slug)) {
+      assert.match(html, /marketing-tech\.ru\/cases\/productionmoscow-ru\//, slug);
+    }
     if (slug === "kazminerals-corporate") {
       assert.match(html, /исходный видеофайл/i, slug);
       assert.doesNotMatch(html, new RegExp(`/media/video/${slug}/master\\.m3u8`), slug);

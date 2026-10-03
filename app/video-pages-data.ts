@@ -226,6 +226,7 @@ export const videoPages: VideoPageData[] = [
     description: "Выпуск разговорного формата с Дмитрием Дибровым. Дополнительные сведения о производственной схеме и задаче этого выпуска не указаны в доступном описании, поэтому страница не добавляет неподтверждённые подробности.",
     highlights: ["Подкаст с Дмитрием Дибровым", "Длинный разговорный формат"],
     keywords: ["Дмитрий Дибров", "подкаст", "интервью", "видеоподкаст"],
+    marketingTechUrl: "https://marketing-tech.ru/cases/productionmoscow-ru/proizvodstvo_podkasta_za_zhizn_s_federalnym_mediynym_gostem/",
     ...vk("456239048"),
   },
   {
